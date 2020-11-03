@@ -5,6 +5,10 @@ import skimage as skim
 import skimage.transform
 import skimage.io
 EPS = 1e-1
+
+#TODO: Return to specific folders as well
+#TODO Make proper command line interface
+
 def resize_files(fn1, fn2):
     """
     Take two geotiff images and resize the second so they are on the same scale
@@ -63,9 +67,12 @@ def split_images(filename, slice_w=256, slice_h=256):
             pos_x += slice_w
         pos_y += slice_h
         pos_x = 0
+
+
+# Read in the original files
 gdal.UseExceptions()
-image_path = r'C:/Users/joost/Dokuments/Uni/practical/raw/site_464_201710_030m_ortho_als11_3channels.tif'
-height_path = r'C:/Users/joost/Dokuments/Uni/practical/raw/site_464__201710_CHM10cm.tif'
+image_path = os.path.expanduser('~/Documents/Uni/Practical/seedlings/data/raw/site_464_201710_030m_ortho_als11_3channels.tif')
+height_path = os.path.expanduser('~/Documents/Uni/Practical/seedlings/data/raw/site_464__201710_CHM10cm.tif')
 resize_files(image_path, height_path)
 # Remove the 33 pixel top-left pad on both images (first 33 are white and there is another 2 pixels off in the xml files)
 image = skim.io.imread(image_path)
