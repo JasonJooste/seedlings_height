@@ -154,7 +154,6 @@ def get_predictions(model, dataloader, params):
 
 
 def evaluate_model(model, dataloader, epoch, params):
-    from src.external.coco_utils import get_coco_api_from_dataset
     # Make predictions for the validation set
     model.eval()
     predictions, targets, image_ids = get_predictions(model, dataloader, params)
@@ -168,8 +167,6 @@ def evaluate_model(model, dataloader, epoch, params):
     # Reformats adds segmentation. This one has scores though
     coco_pred = coco_gt.loadRes(predictions)
     coco_eval = COCOeval(coco_gt, coco_pred, iouType="bbox")
-    # coco_eval.params.imgIds = image_ids
-    # coco_eval.params.useCats = True Usecats = true?
     coco_eval.evaluate()
     coco_eval.accumulate()
     coco_eval.summarize()
@@ -205,5 +202,8 @@ def fit(params):
             epoch_losses.append(loss_value)
         # Now validation
         print(f"EPOCH {epoch} loss: {np.mean(epoch_losses)}")
+        # TODO: Return valid loss and valid MAP here
         evaluate_model(model, valid_dataloader, epoch, params)
+        # Model saving
+
     return model

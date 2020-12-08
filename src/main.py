@@ -52,6 +52,8 @@ def execute_models(params, use_cache=True):
             # The model file already exists
             logging.log(logging.INFO, f"This model has already been trained and is stored in {config_fn}/.py - training skipped.")
             continue
+        # Set the seed
+        utils.set_seed(config["seed"])
         # The model doesn't exist yet - train it
         model = fit(config)
         # Save the model file

@@ -1,4 +1,5 @@
 import os
+from random import random
 
 import cv2
 import torch
@@ -101,6 +102,17 @@ def extract_base_id(file_string):
     file_string = file_string.replace("_030m_ortho_als11_3channels_buffer_removed_cut", "")
     file_string = file_string.replace("_030m_ortho_als11_3channels_cut", "")
     return file_string
+
+
+def set_seed(seed):
+    # https://pytorch.org/docs/stable/notes/randomness.html for more info
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+
 
 
 def get_alive_tensors():
