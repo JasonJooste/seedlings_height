@@ -1,0 +1,24 @@
+# Is it possible to have hierarchical config files? XML? Hydra?
+#################### DATA LOCATION ####################
+'train_file': ['../data/site_464_201710_30_train.csv']
+'test_file': ['../data/site_464_201710_30_test.csv']
+#################### MODEL LOCATION ####################
+'model_type': ["RCNN"]
+'model_name': ["RCNN-resnet-50"]
+'base_model_path': ["../models/templates/RCNN-resnet-50.pt"]
+'output_dir': ["../models/trained/"]
+#################### TASK ####################
+'task_name': ["464_30m_RCC-resnet50-recreate-paper"]
+'task_description': ["Site 464 30m standard RCC with resnet 50. Attempt to recreate paper"]
+# Could include optimizer hyperparams by making this nested. Maybe different config files for optimiser here?
+#################### TRAINING ####################
+'optimiser': ['ADAM']
+'epochs': [100]
+'valid_ratio': [0.1]
+'dataloader_num_workers': [5]
+'train_batch_size': [10]
+'eval_batch_size': [5]
+'learning_rate': [1e-6, 1e-5, 1e-4]
+'max_seq_length': [512]
+'logging_steps': [2]
+'seed': [1337, 42]
