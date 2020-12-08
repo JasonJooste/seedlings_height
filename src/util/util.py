@@ -1,5 +1,5 @@
 import os
-from random import random
+import random
 
 import cv2
 import torch
@@ -94,6 +94,7 @@ def convert_to_xywh(boxes):
     xmin, ymin, xmax, ymax = boxes.unbind(1)
     return torch.stack((xmin, ymin, xmax - xmin, ymax - ymin), dim=1)
 
+
 def extract_base_id(file_string):
     #Remove a path if there is one
     file_string = os.path.basename(file_string)
@@ -112,7 +113,6 @@ def set_seed(seed):
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
     random.seed(seed)
-
 
 
 def get_alive_tensors():

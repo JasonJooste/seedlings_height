@@ -19,7 +19,18 @@ class SeedlingDataset(Dataset):
         self.datafiles = datafiles
         self.img_boxes = self._read_boxes()
 
-    def __getitem__(self, index: int):
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            start, stop, step = key.indices(len(self))
+            tuple_list = [self[i] for i in range(start, stop, step)]
+            unzipped = list(zip(* tuple_list))
+            return unzipped
+        elif isinstance(key, int):
+            return self.get_value(key)
+        else:
+            raise TypeError('Invalid argument type: {}'.format(type(key)))
+
+    def get_value(self, index: int):
         id = self.datafiles["id"].iloc[index]
         records = self.img_boxes[self.img_boxes["id"] == id]
         img_path = self.datafiles.loc[self.datafiles["id"] == id, "im_filename"]
