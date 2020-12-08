@@ -1,127 +1,79 @@
 import logging
-import pandas as pd
-import numpy as np
-import cv2
-import os
-import re
-from PIL import Image
-import albumentations as A
-from albumentations.pytorch.transforms import ToTensorV2
 import torch
-import torchvision
-from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
-from torchvision.models.detection import FasterRCNN
-from torchvision.models.detection.rpn import AnchorGenerator
-from torch.utils.data import DataLoader, Dataset
-from torch.utils.data.sampler import SequentialSampler
-from matplotlib import pyplot as plt
-import xml.etree.ElementTree as ET
-from os import walk
-from os import path
+import src.util.util as utils
+import sys
+import yaml
+import itertools
+from random import shuffle
+
+from src.models.make_base_models import make_vanilla_model
+from src.models.train_model import fit
+from datetime import datetime
+import copy
 
 
-#TODO: Don't forget the second dataset!
-class SeedlingDataset(Dataset):
-    def __init__(self, im_dir, label_dir):
-        super().__init__()
-        self.im_dir = im_dir
-        self.label_dir = label_dir
-        # Get the list of files
-        im_ids = self._get_ids(im_dir)
-        #TODO: This is kind of a hack. There is probably a better way to organise all of the files into different groups without file names
-        # Maybe some kind of csv file with all the data??
-        label_ids = self._get_ids(label_dir)
-        for ind in range(len(label_ids)):
-            label_ids[ind] = label_ids[ind].replace("channels_cut-", "channels_buffer_removed_cut-")
-        # If they don't agree we can throw some away (probably worth logging as well)
-        shared_ids = list(set(im_ids) & set(label_ids))
-        if len(shared_ids) != len(im_ids):
-            ims_missing_label = list(set(im_ids) - set(label_ids))
-            labels_missing_ind = list(set(label_ids) - set(im_ids))
-            for im in ims_missing_label:
-                logging.warning(f"Image {im}.tif is missing its corresponding label")
-            for lab in labels_missing_ind:
-                logging.warning(f"Label {lab}.xml is missing its corresponding image")
-        self.ids = shared_ids
-        # Read in a dictionary of bounding boxes
-        self.img_boxes = self._get_boxes(shared_ids)
-
-    def __getitem__(self, index: int):
-        id = self.ids[index]
-        records = self.img_boxes[self.img_boxes["id"] == id]
-        # TODO: Not exactly sure what the next three lines actually do
-        image = cv2.imread(f"{self.im_dir}/{id}.tif", cv2.IMREAD_COLOR)
-        assert(image, "The image should exist")
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        #TODO: need to figure out a way to efficiently do image scaling
-        # image /= 255.0
-        labels = torch.ones((records.shape[0],), dtype=torch.int64)
-        # TODO: Don't know what a crowd is
-        iscrowd = torch.zeros((records.shape[0],), dtype=torch.int64)
-        target = {}
-        target["boxes"] = records[["xmin", "ymin", "xmax", "ymax"]].values
-        target["area"] = (records["xmax"] - records["xmin"]) * (records["ymax"] - records["ymin"])
-        target["labels"] = labels
-        # TODO: What is this for?
-        target["image_id"] = torch.tensor([index])
-        target["iscrowd"] = iscrowd
-        # TODO: Transformations here maybe?
-        return image, target, id
-
-    def _get_boxes(self, ids):
-        # Get a dataframe with all bounding boxes
-        # It's more efficient to convert into a dataframe at the end
-        id_entries = []
-        xmins = []
-        xmaxs = []
-        ymins = []
-        ymaxs = []
-        truncateds = []
-        for id in ids:
-            filename = f"{self.label_dir}/{id}.xml"
-            # TODO: Again a hack. I need to figure out a nicer system to manage file paths.
-            #  Maybe just a csv file of logs and corresponding files?
-            filename = filename.replace("_buffer_removed", "")
-            # The xml parser reads in a tree structure
-            root = ET.parse(filename).getroot()
-            box_elems = root.findall("object")
-            for ind, box_elem in enumerate(box_elems):
-                id_entries.append(id)
-                truncateds.append(box_elem.find("truncated").text == "1")
-                box = box_elem.find("bndbox")
-                xmins.append(int(box.find("xmin").text))
-                xmaxs.append(int(box.find("xmax").text))
-                ymins.append(int(box.find("ymin").text))
-                ymaxs.append(int(box.find("ymax").text))
-        # Create the final dataframe
-        df = pd.DataFrame(zip(ids, xmins, xmaxs, ymins, ymaxs, truncateds), columns=["id", "xmin", "xmax", "ymin", "ymax", "truncated"])
-        return df
-
-    def _get_ids(self, directory : str):
-        """
-        Get a list of file ids within the directory
-        :param directory: The directory to search in
-        :return: A list of filenames stripped of extensions
-        """
-        # First check if the directory exists
-        if not path.exists(directory):
-            raise NotADirectoryError
-        # A quick way to get all files in directory
-        (_, _, img_paths) = next(walk(directory))
-        # Strip the file extensions
-        ids = [path.splitext(x)[0] for x in img_paths]
-        return ids
+def get_existing_config(this_config, existing_configs, config_filenames):
+    assert len(existing_configs) == len(config_filenames)
+    # Each config file has one extra entry: Model_path. This needs to be removed before comparison
+    without_model_path = copy.deepcopy(existing_configs)
+    for dict in without_model_path:
+        del dict["trained_model_path"]
+    # Compare the dictionaries to find a match
+    matches = [this_config == config for config in without_model_path]
+    match_dict = None
+    match_filename = None
+    # If there's a match then return the config dict and its filename
+    if any(matches):
+        match_ind = [i for i,x in enumerate(matches) if x]
+        assert len(match_ind) == 1, "There should be only one matching config"
+        match_dict = existing_configs[match_ind[0]]
+        match_filename = config_filenames[match_ind[0]]
+    return match_dict, match_filename
 
 
-DIR_INPUT = path.expanduser('~/Documents/Uni/Practical/seedlings/data')
-im_dir = f"{DIR_INPUT}/tiled"
-label_dir = f"{DIR_INPUT}/labels"
-data = SeedlingDataset(im_dir,label_dir)
-for i in range(100):
-    (a,b,c) = data[i]
-    print(b)
+def gen_model_filename(config, iter):
+    date_str = datetime.today().strftime('%Y-%m-%d')
+    return f"{config['output_dir']}/{date_str}_{config['task_name']}_{str(iter)}"
 
 
+def execute_models(params, use_cache=True):
+    # Read in existing models
+    existing_config_fns = utils.get_filenames("../models/trained", ".yaml", keep_ext=True, full_path=True)
+    # TODO: This is probably not very exception robust
+    existing_configs = [yaml.load(open(filename, 'r')) for filename in existing_config_fns]
+    # Get list of individual tasks
+    search_list = [dict(zip(params.keys(), values)) for values in itertools.product(*params.values())]
+    shuffle(search_list)
+    # Run training
+    for ind, config in enumerate(search_list):
+        # Check for existing model files
+        (existing_config, config_fn) = get_existing_config(config, existing_configs, existing_config_fns)
+        if use_cache and existing_config:
+            # The model file already exists
+            logging.log(logging.INFO, f"This model has already been trained and is stored in {config_fn}/.py - training skipped.")
+            continue
+        # The model doesn't exist yet - train it
+        model = fit(config)
+        # Save the model file
+        filename = gen_model_filename(config, ind)
+        torch.save(model, filename+".pt")
+        # Save the config file
+        config["trained_model_path"] = filename+".pt"
+        file = open(filename+".yaml", 'w')
+        yaml.dump(config, file)
+
+    # Run validation
+    # Here we read in model files and perform evaluation on them
 
 
-# model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+if __name__ == "__main__":
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    config_filename = sys.argv[1]
+    config_file = open(config_filename, 'r')
+    params = yaml.load(config_file)
+    use_cache = False
+    # make_vanilla_model("../models/templates")
+    execute_models(params, use_cache)
+
+
