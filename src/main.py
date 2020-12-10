@@ -45,24 +45,24 @@ def execute_models(params, use_cache=True):
     search_list = [dict(zip(params.keys(), values)) for values in itertools.product(*params.values())]
     shuffle(search_list)
     # Run training
-    for ind, config in enumerate(search_list):
+    for ind, this_config in enumerate(search_list):
         # Check for existing model files
-        (existing_config, config_fn) = get_existing_config(config, existing_configs, existing_config_fns)
+        (existing_config, config_fn) = get_existing_config(this_config, existing_configs, existing_config_fns)
         if use_cache and existing_config:
             # The model file already exists
             logging.log(logging.INFO, f"This model has already been trained and is stored in {config_fn}/.py - training skipped.")
             continue
         # Set the seed
-        utils.set_seed(config["seed"])
+        utils.set_seed(this_config["seed"])
         # The model doesn't exist yet - train it
-        model = fit(config)
+        model = fit(this_config)
         # Save the model file
-        filename = gen_model_filename(config, ind)
+        filename = gen_model_filename(this_config, ind)
         torch.save(model, filename+".pt")
         # Save the config file
-        config["trained_model_path"] = filename+".pt"
+        this_config["trained_model_path"] = filename+".pt"
         file = open(filename+".yaml", 'w')
-        yaml.dump(config, file)
+        yaml.dump(this_config, file)
 
     # Run validation
     # Here we read in model files and perform evaluation on them
