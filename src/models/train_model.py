@@ -252,8 +252,8 @@ def fit(params):
         train_loss = np.mean(epoch_losses) / len(train_dataloader.dataset)
         train_MAP = np.mean(epoch_maps)
         # Now validation
-        print(f"EPOCH {epoch} valid loss: {valid_loss} | valid MAP: {valid_MAP} | train loss: {train_loss} | "
-              f"train MAP: {train_MAP}")
+        print(f"EPOCH {epoch} valid loss: {valid_loss:.8f} | valid MAP: {valid_MAP:.3f} | train loss: {train_loss:.8f} | "
+              f"train MAP: {train_MAP:.3f}")
         # TODO: Model saving
 
         # TODO: Early stopping
