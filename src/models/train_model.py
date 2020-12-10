@@ -173,6 +173,7 @@ def get_MAP(coco_gt, coco_pred):
     return coco_eval.stats[MAP_IND]
 
 
+@utils.block_print
 def get_train_MAP(predictions, images, targets):
     """ Get MAP and loss of a model on the training dataset. For this we already have predictions, losses and targets"""
     # Create a coco object for the true labels
@@ -187,6 +188,7 @@ def get_train_MAP(predictions, images, targets):
     return get_MAP(coco_gt, coco_pred)
 
 
+@utils.block_print
 def evaluate_model_validation(model, dataloader, params):
     """
     Get the MAP and loss of a model on the validation dataset. This loads data from the dataloader.

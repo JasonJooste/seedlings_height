@@ -1,6 +1,8 @@
 import os
 import random
 
+import sys
+import os
 import cv2
 import torch
 import matplotlib.pyplot as plt
@@ -114,6 +116,15 @@ def set_seed(seed):
     np.random.seed(seed)
     random.seed(seed)
 
+
+def block_print(func):
+    """A function decorator to block printing within the function"""
+    def non_print_function(*args, **kwargs):
+        sys.stdout = open(os.devnull, 'w')
+        result = func(*args, **kwargs)
+        sys.stdout = sys.__stdout__
+        return result
+    return non_print_function
 
 def get_alive_tensors():
     alive_tensors = []
