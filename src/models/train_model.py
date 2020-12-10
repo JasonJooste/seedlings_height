@@ -146,7 +146,7 @@ def get_predictions(model, dataloader, params):
     losses = []
     #TODO: We need to think about batch size as well. We get a single loss for each batch
     for batch_images, batch_targets, _ in dataloader:
-        batch_size = dataloader.batch_size
+        batch_size = len(batch_images)
         images = list(img.to(device) for img in batch_images)
         batch_targets = ([{k: v.to(device) for k, v in t.items()} for t in batch_targets])
         batch_losses, batch_predictions = model(images, batch_targets)
@@ -159,9 +159,8 @@ def get_predictions(model, dataloader, params):
         batch_loss = sum(batch_losses.values())
         losses.append(batch_loss.item() * batch_size)
     # Now we average over the total number of values to get the average loss per sample
-    av_loss = np.mean(losses) / len(dataloader.dataset)
+    av_loss = np.sum(losses) / len(dataloader.dataset)
     return predictions, av_loss
-
 
 def get_MAP(coco_gt, coco_pred):
     """Return the MAP at IoU=05"""
@@ -226,7 +225,7 @@ def fit(params):
         epoch_losses = []
         epoch_maps = []
         for images, targets, image_ids in train_dataloader:
-            batch_size = train_dataloader.batch_size
+            batch_size = len(images)
             # Send to the current device
             if device:
                 images = [image.to(device) for image in images]
@@ -249,7 +248,7 @@ def fit(params):
             epoch_maps.append(MAP)
         valid_loss, valid_MAP = evaluate_model_validation(model, valid_dataloader, params)
         # Get the average loss per sample
-        train_loss = np.mean(epoch_losses) / len(train_dataloader.dataset)
+        train_loss = np.sum(epoch_losses) / len(train_dataloader.dataset)
         train_MAP = np.mean(epoch_maps)
         # Now validation
         print(f"EPOCH {epoch} valid loss: {valid_loss:.8f} | valid MAP: {valid_MAP:.3f} | train loss: {train_loss:.8f} | "
