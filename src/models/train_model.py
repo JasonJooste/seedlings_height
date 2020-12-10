@@ -89,30 +89,39 @@ def prepare_for_coco_detection(predictions):
         coco_results.extend(individual_boxes)
     return coco_results
 
-def convert_to_coco_api(ds):
+
+def convert_to_coco_ds(ds):
+    images, targets, _ = ds[:]
+    return convert_to_coco(images, targets)
+
+
+def convert_to_coco(images, targets):
     coco_ds = COCO()
+    assert len(images) == len(targets)
     ann_id = 0
     dataset = {'images': [], 'categories': [], 'annotations': []}
     categories = set()
-    for img_idx in range(len(ds)):
+    for img_idx in range(len(images)):
         # find better way to get target
         # targets = ds.get_annotations(img_idx)
-        img, targets, _ = ds[img_idx]
+        #TODO - do we really need to send the entire image for getting the MAP? Can we just send an object that has a shape?
+        img = images[img_idx]
+        target = targets[img_idx]
         # Replacing their structure with mine
-        image_id = targets["image_id"].item()
+        image_id = target["image_id"].item()
         # image_id = torch.tensor([img_idx])
         img_dict = {}
         img_dict['id'] = image_id
         img_dict['height'] = img.shape[-2]
         img_dict['width'] = img.shape[-1]
         dataset['images'].append(img_dict)
-        bboxes = targets["boxes"]
+        bboxes = target["boxes"]
         # Convert to xywh
         bboxes[:, 2:] -= bboxes[:, :2]
         bboxes = bboxes.tolist()
-        labels = targets['labels'].tolist()
-        areas = targets['area'].tolist()
-        iscrowd = targets['iscrowd'].tolist()
+        labels = target['labels'].tolist()
+        areas = target['area'].tolist()
+        iscrowd = target['iscrowd'].tolist()
         num_objs = len(bboxes)
         for i in range(num_objs):
             ann = {}
@@ -130,52 +139,81 @@ def convert_to_coco_api(ds):
     coco_ds.createIndex()
     return coco_ds
 ########################################################################################################################
-
-# TODO This might be inefficient with all of these data stored on the graphics card
+@torch.no_grad()
 def get_predictions(model, dataloader, params):
     device = get_device(params)
-    image_ids = []
-    targets = []
     predictions = {}
-    for batch_images, batch_targets, batch_ids in dataloader:
+    losses = []
+    #TODO: We need to think about batch size as well. We get a single loss for each batch
+    for batch_images, batch_targets, _ in dataloader:
+        batch_size = dataloader.batch_size
         images = list(img.to(device) for img in batch_images)
-        # TODO: I'd imagine the targets can stay in regular memory - though it's set up differently in the other
-        #  file.. weird
-        # targets.extend([{k: v.to(device) for k, v in t.items()} for t in batch_targets])
-        targets.extend(batch_targets)
-        batch_predictions = model(images)
+        batch_targets = ([{k: v.to(device) for k, v in t.items()} for t in batch_targets])
+        batch_losses, batch_predictions = model(images, batch_targets)
         # Push the results back to cpu
         batch_outputs = [{k: v.to("cpu") for k, v in t.items()} for t in batch_predictions]
         # Map IDs to outputs
         res = {target["image_id"].item(): output for target, output in zip(batch_targets, batch_outputs)}
         predictions.update(res)
-        image_ids.extend(batch_ids)
-    return predictions, targets, image_ids
+        # Push the losses back to the cpu
+        batch_loss = sum(batch_losses.values())
+        losses.append(batch_loss.item() * batch_size)
+    # Now we average over the total number of values to get the average loss per sample
+    av_loss = np.mean(losses) / len(dataloader.dataset)
+    return predictions, av_loss
 
 
-def evaluate_model(model, dataloader, epoch, params):
-    # Make predictions for the validation set
-    model.eval()
-    predictions, targets, image_ids = get_predictions(model, dataloader, params)
-    # Converts to COCO format - i.e. adds image labels and changes to xywh
-    predictions = prepare_for_coco_detection(predictions)
-    if not predictions:
-        print("Nothing predicted")
-        return
-    # We need to load the coco api with the ground truth labels
-    coco_gt = convert_to_coco_api(dataloader.dataset)
-    # Reformats adds segmentation. This one has scores though
-    coco_pred = coco_gt.loadRes(predictions)
+def get_MAP(coco_gt, coco_pred):
+    """Return the MAP at IoU=05"""
+    MAP_IND = 1
     coco_eval = COCOeval(coco_gt, coco_pred, iouType="bbox")
     coco_eval.evaluate()
     coco_eval.accumulate()
     coco_eval.summarize()
+    return coco_eval.stats[MAP_IND]
+
+
+def get_train_MAP(predictions, images, targets):
+    """ Get MAP and loss of a model on the training dataset. For this we already have predictions, losses and targets"""
+    # Create a coco object for the true labels
+    coco_gt = convert_to_coco(images, targets)
+    # Create a coco object for the predictions
+    predictions = prepare_for_coco_detection(predictions)
+    if not predictions:
+        # If we make no predictions then we would be dividing by 0. As convention let this be 0
+        print("no preds")
+        return 0
+    coco_pred = coco_gt.loadRes(predictions)
+    return get_MAP(coco_gt, coco_pred)
+
+
+def evaluate_model_validation(model, dataloader, params):
+    """
+    Get the MAP and loss of a model on the validation dataset. This loads data from the dataloader.
+
+    """
+    # Make predictions for the validation set
+    # model.eval()
+    predictions, av_loss = get_predictions(model, dataloader, params)
+    if not predictions:
+        print("Nothing predicted")
+        return av_loss, 0
+    # Converts to COCO format - i.e. adds image labels and changes to xywh
+    predictions = prepare_for_coco_detection(predictions)
+    # We need to load the coco api with the ground truth labels
+    coco_gt = convert_to_coco_ds(dataloader.dataset)
+    # Reformats adds segmentation. This one has scores though
+    coco_pred = coco_gt.loadRes(predictions)
+    MAP = get_MAP(coco_gt, coco_pred)
+    return av_loss, MAP
 
 
 def fit(params):
     """
     Generic model fitting function
     """
+    # Hack to get the RCNN to always return both the predictions and losses
+    torch.jit.is_scripting = lambda: True
     device = get_device(params)
     train_dataloader, valid_dataloader = get_dataloader(params)
     model = torch.load(params["base_model_path"]).to(device)
@@ -184,26 +222,38 @@ def fit(params):
         # Training
         model.train()
         epoch_losses = []
+        epoch_maps = []
         for images, targets, image_ids in train_dataloader:
+            batch_size = train_dataloader.batch_size
             # Send to the current device
-            # TODO: is images really a list of images? Shouldn't this just be a 4d tensor?
             if device:
                 images = [image.to(device) for image in images]
                 targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
             # Get the losses
             assert len(targets) > 0, "Should at least have one bounding box per image (for now)"
-            # TODO: How to feed empty values here?
-            loss_dict = model(images, targets)
+            loss_dict, predictions = model(images, targets)
             losses = sum(loss_dict.values())
             losses.backward()
             opt.step()
             opt.zero_grad()
+            # Logging here
+            # Push the results back to cpu
+            outputs = [{k: v.to("cpu") for k, v in t.items()} for t in predictions]
+            # Map IDs to outputs
+            res = {target["image_id"].item(): output for target, output in zip(targets, outputs)}
+            MAP = get_train_MAP(res, images, targets)
             loss_value = losses.item()
-            epoch_losses.append(loss_value)
+            epoch_losses.append(loss_value * batch_size)
+            epoch_maps.append(MAP)
+        valid_loss, valid_MAP = evaluate_model_validation(model, valid_dataloader, params)
+        # Get the average loss per sample
+        train_loss = np.mean(epoch_losses) / len(train_dataloader.dataset)
+        train_MAP = np.mean(epoch_maps)
         # Now validation
-        print(f"EPOCH {epoch} loss: {np.mean(epoch_losses)}")
-        # TODO: Return valid loss and valid MAP here
-        evaluate_model(model, valid_dataloader, epoch, params)
-        # Model saving
+        print(f"EPOCH {epoch} valid loss: {valid_loss} | valid MAP: {valid_MAP} | train loss: {train_loss} | "
+              f"train MAP: {train_MAP}")
+        # TODO: Model saving
+
+        # TODO: Early stopping
 
     return model
