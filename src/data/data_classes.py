@@ -48,12 +48,11 @@ class SeedlingDataset(Dataset):
         iscrowd = torch.zeros((records.shape[0],), dtype=torch.int64)
         # TODO: Put this into coco format straight away? Might be some overhead with uploading unncessary stuff to the GPU...
         target = {}
-        target["image_id"] = torch.Tensor(index)
+        target["image_id"] = torch.tensor(index)
         target["boxes"] = torch.Tensor(records[["xmin", "ymin", "xmax", "ymax"]].values)
         areas = (records["xmax"] - records["xmin"]) * (records["ymax"] - records["ymin"])
         target["area"] = torch.Tensor(areas.values)
         target["labels"] = labels
-        target["image_id"] = torch.tensor([index])
         target["iscrowd"] = iscrowd
         return image, target, id
 
