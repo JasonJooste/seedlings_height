@@ -120,9 +120,10 @@ def set_seed(seed):
 def block_print(func):
     """A function decorator to block printing within the function"""
     def non_print_function(*args, **kwargs):
-        sys.stdout = open(os.devnull, 'w')
-        result = func(*args, **kwargs)
-        sys.stdout = sys.__stdout__
+        prev_out = sys.stdout
+        with open(os.devnull, 'w') as sys.stdout:
+            result = func(*args, **kwargs)
+        sys.stdout = prev_out
         return result
     return non_print_function
 
