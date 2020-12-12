@@ -45,7 +45,7 @@ def get_optimiser(model_params, params):
 
 # TODO: This could be more complicated later
 def get_device(params):
-    return torch.device('cuda')
+    return torch.device('cuda:1')
 
 
 @utils.block_print
