@@ -55,6 +55,8 @@ def execute_models(params, use_cache=True):
         # Set the seed
         utils.set_seed(this_config["seed"])
         # The model doesn't exist yet - train it
+        print("=======================================================================================================")
+        print(f"Training new config: {this_config}")
         model = fit(this_config)
         # Save the model file
         filename = gen_model_filename(this_config, ind)
@@ -75,7 +77,8 @@ if __name__ == "__main__":
     config_file = open(config_filename, 'r')
     params = yaml.load(config_file)
     use_cache = False
-    # make_vanilla_model("../models/templates")
+    # for i in range(6):
+    #     make_vanilla_model("../models/templates", trainable_backbone_layers=i)
     execute_models(params, use_cache)
 
 
