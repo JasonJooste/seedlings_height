@@ -1,21 +1,20 @@
+import pathlib
 import gdal
-import os.path
-from pathlib import Path
 import skimage as skim
 import skimage.transform
 import skimage.io
 EPS = 1e-1
 
-#TODO: Return to specific folders as well
-#TODO Make proper command line interface
+module_path = pathlib.Path(__file__).parent
+base_dir = module_path.parent.parent.resolve()
 
 def resize_files(fn1, fn2):
     """
     Take two geotiff images and resize the second so they are on the same scale
     :return:
     """
-    data1 = gdal.Open(fn1)
-    data2 = gdal.Open(fn2)
+    data1 = gdal.Open(str(fn1))
+    data2 = gdal.Open(str(fn2))
     if not data1 or not data2:
         return # This could be better. Maybe an exception should be thrown
     gt1 = data1.GetGeoTransform()
@@ -44,10 +43,10 @@ def resize_files(fn1, fn2):
     im_arr = data2.ReadAsArray()
     new_im_arr = skim.transform.resize(im_arr, (new_y, new_x), mode='constant')
     # This will not include the geo info in the file. But it isn't necessary at the moment
-    split = os.path.splitext(fn2)
-    # TODO This is pretty ugly
-    new_fn = split[0].replace("/raw/images/", "/interim/") + "_large" + split[1]
-    skim.io.imsave(new_fn, new_im_arr)
+    filename = fn2.stem
+    new_filename = f"{filename}_large{fn2.suffix}"
+    new_file = base_dir / "data" / "interim" / new_filename
+    skim.io.imsave(new_file, new_im_arr)
 
 def split_images(filename, new_path,  slice_w=512, slice_h=512):
     """
@@ -59,12 +58,12 @@ def split_images(filename, new_path,  slice_w=512, slice_h=512):
     im_w = image.shape[1]
     pos_x = 0
     pos_y = 0
-    splitname = os.path.splitext(new_path)
     while pos_y < im_h:
         while pos_x < im_w:
             im_sec = image[pos_y:pos_y+slice_h, pos_x:pos_x+slice_w]
-            filename = splitname[0] + "_cut-{}-{}".format(pos_x, pos_y) + splitname[1]
-            skim.io.imsave(filename, im_sec)
+            new_filename = new_path.stem + f"_cut-{pos_x}-{pos_y}" + new_path.suffix
+            new_filepath = new_path.parent / new_filename
+            skim.io.imsave(new_filepath, im_sec)
             pos_x += slice_w
         pos_y += slice_h
         pos_x = 0
@@ -73,26 +72,26 @@ SLICE_H = 256
 
 # Read in the original files
 gdal.UseExceptions()
-print(os.getcwd())
-image_path = os.path.abspath('../../data/raw/images/site_464_201710_030m_ortho_als11_3channels.tif')
-height_path = os.path.abspath('../../data/raw/images/site_464_201710_CHM10cm.tif')
+image_path = base_dir.joinpath("data/raw/images/site_464_201710_030m_ortho_als11_3channels.tif").resolve()
+height_path = base_dir.joinpath("data/raw/images/site_464_201710_CHM10cm.tif").resolve()
 resize_files(image_path, height_path)
 # Remove the 33 pixel top-left pad on both images (first 33 are white and there is another 2 pixels off in the xml files)
 image = skim.io.imread(image_path)
-im_splitname = os.path.splitext(image_path)
-im_new_name = im_splitname[0].replace("/raw/images/", "/interim/") + "_buffer_removed" + im_splitname[1]
+im_new_filename = f"{image_path.stem}_buffer_removed"+image_path.suffix
+im_new_path = base_dir / "data" / "interim" / im_new_filename
 shift = 35
-skim.io.imsave(im_new_name, image[shift+1:, shift+1:, :])
+skim.io.imsave(im_new_path, image[shift+1:, shift+1:, :])
 # Second image
-h_splitname = os.path.splitext(height_path)
-#TODO This is pretty ugly - would be nice to fix this
-height_path = h_splitname[0].replace("/raw/images/", "/interim/") + "_large" + h_splitname[1]
-height = skim.io.imread(height_path)
-h_splitname = os.path.splitext(height_path)
-h_new_name = h_splitname[0].replace("/raw/images/", "/interim/") + "_buffer_removed" + h_splitname[1]
-skim.io.imsave(h_new_name, height[shift+1:, shift+1:])
+# Read in
+h_new_filename = f"{height_path.stem}_large"+height_path.suffix
+h_new_path = base_dir / "data" / "interim" / h_new_filename
+height = skim.io.imread(h_new_path)
+# Write out
+h_new_new_filename = f"{h_new_path.stem}_buffer_removed"+height_path.suffix
+h_new_new_path = base_dir / "data" / "interim" / h_new_new_filename
+skim.io.imsave(h_new_new_path, height[shift+1:, shift+1:])
 # Split the images
-im_new_path = im_new_name.replace("/interim/", "/processed/")
-h_new_path = h_new_name.replace("/interim/", "/processed/")
-split_images(im_new_name, im_new_path, SLICE_W, SLICE_H)
-split_images(h_new_name, h_new_path, SLICE_W, SLICE_H)
+im_final_path = base_dir / "data" / "processed" / im_new_filename
+h_final_path = base_dir / "data" / "processed" / h_new_new_filename
+split_images(im_new_path, im_final_path, SLICE_W, SLICE_H)
+split_images(h_new_new_path, h_final_path, SLICE_W, SLICE_H)

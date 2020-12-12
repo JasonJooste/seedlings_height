@@ -14,7 +14,7 @@ def make_vanilla_model(model_dir, pretrained=True, trainable_backbone_layers=0):
     # Replace the model's RoIHead with our version
     roi_wapped = RoIHeadsWrapper(model.roi_heads)
     model.roi_heads = roi_wapped
-    path = model_dir + "/RCNN-resnet-50.pt"
+    path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer.pt"
     torch.save(model, path)
 
 

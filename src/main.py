@@ -1,4 +1,6 @@
 import logging
+
+import os
 import torch
 import src.util.util as utils
 import sys
@@ -10,6 +12,11 @@ from src.models.make_base_models import make_vanilla_model
 from src.models.train_model import fit
 from datetime import datetime
 import copy
+import pathlib
+
+#TODO: Not sure if it is good practice to leave this here to be executed at import.
+module_path = pathlib.Path(__file__).parent
+base_dir = module_path.parent.absolute()
 
 
 def get_existing_config(this_config, existing_configs, config_filenames):
@@ -33,14 +40,19 @@ def get_existing_config(this_config, existing_configs, config_filenames):
 
 def gen_model_filename(config, iter):
     date_str = datetime.today().strftime('%Y-%m-%d')
-    return f"{config['output_dir']}/{date_str}_{config['task_name']}_{str(iter)}"
+    filename = f"{date_str}_{config['task_name']}_{str(iter)}"
+    path = base_dir.joinpath(config['output_dir']) / filename
+    return path
 
 
 def execute_models(params, use_cache=True):
     # Read in existing models
-    existing_config_fns = utils.get_filenames("../models/trained", ".yaml", keep_ext=True, full_path=True)
-    # TODO: This is probably not very exception robust
-    existing_configs = [yaml.load(open(filename, 'r')) for filename in existing_config_fns]
+    trained_folder = base_dir / "models" / "trained"
+    existing_config_fns = utils.get_filenames(trained_folder, ".yaml", keep_ext=True, full_path=True)
+    existing_configs = []
+    for filename in existing_config_fns:
+        with open(filename, 'r') as file:
+            existing_configs.append(yaml.load(file))
     # Get list of individual tasks
     search_list = [dict(zip(params.keys(), values)) for values in itertools.product(*params.values())]
     shuffle(search_list)
@@ -60,10 +72,12 @@ def execute_models(params, use_cache=True):
         model = fit(this_config)
         # Save the model file
         filename = gen_model_filename(this_config, ind)
-        torch.save(model, filename+".pt")
+        # print(filename)
+        filename.with_suffix(".pt")
+        torch.save(model, filename.with_suffix(".pt"))
         # Save the config file
-        this_config["trained_model_path"] = filename+".pt"
-        file = open(filename+".yaml", 'w')
+        this_config["trained_model_path"] = str(filename.with_suffix(".pt"))
+        file = open(filename.with_suffix(".yaml"), 'w')
         yaml.dump(this_config, file)
 
     # Run validation
@@ -77,8 +91,9 @@ if __name__ == "__main__":
     config_file = open(config_filename, 'r')
     params = yaml.load(config_file)
     use_cache = False
-    # for i in range(6):
-    #     make_vanilla_model("../models/templates", trainable_backbone_layers=i)
+    for i in range(6):
+        template_dir = base_dir / "models" / "templates"
+        make_vanilla_model(template_dir, trainable_backbone_layers=i)
     execute_models(params, use_cache)
 
 

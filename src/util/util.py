@@ -42,8 +42,9 @@ def get_filenames(directory, ext, keep_ext=False, full_path=False):
     :return: A list of filenames stripped of extensions
     """
     # First check if the directory exists
+    directory = os.path.abspath(directory)
     if not os.path.exists(directory):
-        raise NotADirectoryError
+        raise NotADirectoryError(f"{directory} is not a directory")
     # A quick way to get all files in directory
     (_, _, img_paths) = next(os.walk(directory))
     # Strip the file extensions

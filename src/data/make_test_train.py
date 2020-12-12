@@ -1,16 +1,19 @@
-from os import path
+import pathlib
 from src.data.data_classes import SeedlingDataset
 import src.util.util as utils
 import logging
 import pandas as pd
 from sklearn.model_selection import train_test_split
+
+module_path = pathlib.Path(__file__).parent
+base_dir = module_path.parent.parent.absolute()
 """
 This is a script to generate a csv file with image and label file names for a train/test split"""
 TEST_SIZE = 0.2
-DIR_INPUT = path.abspath('../../data')
+DIR_INPUT = base_dir / "data"
 
-im_dir = f"{DIR_INPUT}/processed"
-label_dir = f"{DIR_INPUT}/raw/labels"
+im_dir = DIR_INPUT / "processed"
+label_dir = DIR_INPUT / "raw/labels"
 # Find all image and label files in directories
 im_ids = pd.DataFrame(utils.get_filenames(im_dir, ".tif"), columns=["im_filename"])
 label_ids = pd.DataFrame(utils.get_filenames(label_dir, ".xml"), columns=["label_filename"])
@@ -39,10 +42,10 @@ for missing_im_ind in missing_labels:
     missing_sample = union_ids["id"][missing_im_ind]
     logging.warning(f"No image file present for sample {missing_sample}")
 # Add full paths and extensions to filenames
-shared_ids["label_filename"] = f"{label_dir}/" + shared_ids['label_filename'] + ".xml"
-shared_ids["im_filename"] = f"{im_dir}/" + shared_ids['im_filename'] + ".tif"
-shared_ids["height_filename"] = f"{im_dir}/" + shared_ids['height_filename'] + ".tif"
+shared_ids["label_filename"] = f"{str(label_dir)}/" + shared_ids['label_filename'] + ".xml"
+shared_ids["im_filename"] = f"{str(im_dir)}/" + shared_ids['im_filename'] + ".tif"
+shared_ids["height_filename"] = f"{str(im_dir)}/" + shared_ids['height_filename'] + ".tif"
 # Split into train test
 train, test = train_test_split(shared_ids, test_size=TEST_SIZE)
-train.to_csv(f"{DIR_INPUT}/site_464_201710_30_train.csv")
-test.to_csv(f"{DIR_INPUT}/site_464_201710_30_test.csv")
+train.to_csv(DIR_INPUT / "site_464_201710_30_train.csv")
+test.to_csv(DIR_INPUT / "site_464_201710_30_test.csv")
