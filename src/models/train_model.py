@@ -176,9 +176,13 @@ def fit(params):
     model_path = base_dir.joinpath(params["base_model_path"])
     model = torch.load(model_path).to(device)
     opt = get_optimiser(model.parameters(), params)
+    # Model saving vars
     best_MAP = 0
     best_model = None
     best_model_epoch = 0
+    # Early stopping vars
+    worse_model_count = 0
+    best_valid_loss = 0
     for epoch in range(params["epochs"]):
         train_av_loss, train_MAP = train_one_epoch(model, train_dataloader, opt, params)
         # The validation needs to stay in training mode to get the validation LOSS - which will be used for early stopping
@@ -200,5 +204,11 @@ def fit(params):
             best_model = copy.deepcopy(model)
             model = model.to(device)
             best_model_epoch = epoch
+        # Now implement early stopping
+        if valid_av_loss > best_valid_loss:
+            worse_model_count += 1
+            if worse_model_count >= params["patience"]:
+                logging.log(logging.INFO, f"Stopped training early at epoch {epoch}")
+                break
     mlflow.log_metric("best-epoch", best_model_epoch)
     return best_model
