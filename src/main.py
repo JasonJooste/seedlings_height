@@ -1,6 +1,8 @@
 import logging
 
 import os
+
+import mlflow
 import torch
 import src.util.util as utils
 import sys
@@ -27,15 +29,18 @@ def get_existing_config(this_config, existing_configs, config_filenames):
         del dict["trained_model_path"]
     # Compare the dictionaries to find a match
     matches = [this_config == config for config in without_model_path]
+    # If there's are matches then return all filenames that match it
     match_dict = None
-    match_filename = None
-    # If there's a match then return the config dict and its filename
-    if any(matches):
-        match_ind = [i for i,x in enumerate(matches) if x]
-        assert len(match_ind) == 1, "There should be only one matching config"
-        match_dict = existing_configs[match_ind[0]]
-        match_filename = config_filenames[match_ind[0]]
-    return match_dict, match_filename
+    match_filenames = []
+    for ind, match in enumerate(matches):
+        if match:
+            new_match_dict = existing_configs[ind]
+            del new_match_dict["trained_model_path"]
+            # Just double checking that the previous matching worked
+            assert match_dict is None or match_dict == new_match_dict
+            match_dict = new_match_dict
+            match_filenames.append(config_filenames[ind])
+    return match_dict, match_filenames
 
 
 def gen_model_filename(config, iter):
@@ -67,9 +72,16 @@ def execute_models(params, use_cache=True):
         # Set the seed
         utils.set_seed(this_config["seed"])
         # The model doesn't exist yet - train it
-        print("=======================================================================================================")
-        print(f"Training new config: {this_config}")
+        logging.log(logging.INFO,"=======================================================================================================")
+        logging.log(logging.INFO,f"Training new config: {this_config}")
+        # Set up MLFlow tracking of this config
+        mlflow.set_experiment(experiment_name=this_config["task_name"])
+        mlflow.start_run()
+        for param, val in this_config.items():
+            mlflow.log_param(param, val)
+        # Fit model
         model = fit(this_config)
+        mlflow.end_run()
         # Save the model file
         filename = gen_model_filename(this_config, ind)
         # print(filename)
@@ -85,8 +97,10 @@ def execute_models(params, use_cache=True):
 
 
 if __name__ == "__main__":
+    # Set up logging and MLFlow tracking
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    mlflow.set_tracking_uri("http://mlflow.dbs.ifi.lmu.de:5000")
     config_filename = sys.argv[1]
     config_file = open(config_filename, 'r')
     params = yaml.load(config_file)
