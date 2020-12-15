@@ -19,7 +19,7 @@ import pathlib
 #TODO: Not sure if it is good practice to leave this here to be executed at import.
 module_path = pathlib.Path(__file__).parent
 base_dir = module_path.parent.absolute()
-
+logger = logging.getLogger(__name__)
 
 def get_existing_config(this_config, existing_configs, config_filenames):
     assert len(existing_configs) == len(config_filenames)
@@ -67,13 +67,13 @@ def execute_models(params, use_cache=True):
         (existing_config, config_fn) = get_existing_config(this_config, existing_configs, existing_config_fns)
         if use_cache and existing_config:
             # The model file already exists
-            logging.log(logging.INFO, f"This model has already been trained and is stored in {config_fn}/.py - training skipped.")
+            logger.log(logging.INFO, f"This model has already been trained and is stored in {config_fn}/.py - training skipped.")
             continue
         # Set the seed
         utils.set_seed(this_config["seed"])
         # The model doesn't exist yet - train it
-        logging.log(logging.INFO,"=======================================================================================================")
-        logging.log(logging.INFO,f"Training new config: {this_config}")
+        logger.log(logging.INFO,"=======================================================================================================")
+        logger.log(logging.INFO,f"Training new config: {this_config}")
         # Set up MLFlow tracking of this config
         mlflow.set_experiment(experiment_name=this_config["task_name"])
         mlflow.start_run()

@@ -5,6 +5,7 @@ import logging
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
+logger = logging.getLogger(__name__)
 module_path = pathlib.Path(__file__).parent
 base_dir = module_path.parent.parent.absolute()
 """
@@ -32,15 +33,15 @@ union_ids = height_ids.merge(colour_ids, on="id", how="outer").merge(label_ids, 
 missing_labels = union_ids["label_filename"].isna().to_numpy().nonzero()[0]
 for missing_label_ind in missing_labels:
     missing_sample = union_ids["id"][missing_label_ind]
-    logging.warning(f"No label file present for sample {missing_sample}")
+    logger.warning(f"No label file present for sample {missing_sample}")
 missing_height = union_ids["height_filename"].isna().to_numpy().nonzero()[0]
 for missing_height_ind in missing_labels:
     missing_sample = union_ids["id"][missing_height_ind]
-    logging.warning(f"No height file present for sample {missing_sample}")
+    logger.warning(f"No height file present for sample {missing_sample}")
 missing_ims = union_ids["im_filename"].isna().to_numpy().nonzero()[0]
 for missing_im_ind in missing_labels:
     missing_sample = union_ids["id"][missing_im_ind]
-    logging.warning(f"No image file present for sample {missing_sample}")
+    logger.warning(f"No image file present for sample {missing_sample}")
 # Add full paths and extensions to filenames
 shared_ids["label_filename"] = f"{str(label_dir)}/" + shared_ids['label_filename'] + ".xml"
 shared_ids["im_filename"] = f"{str(im_dir)}/" + shared_ids['im_filename'] + ".tif"
