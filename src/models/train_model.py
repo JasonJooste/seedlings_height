@@ -208,6 +208,8 @@ def fit(params):
         # Now implement early stopping
         if valid_av_loss > best_valid_loss:
             worse_model_count += 1
+            if not "patience" in params:
+                params["patience"] = params["epochs"]
             if worse_model_count >= params["patience"]:
                 logger.log(logging.INFO, f"Stopped training early at epoch {epoch}")
                 break
