@@ -176,6 +176,9 @@ def fit(params):
     model_path = base_dir.joinpath(params["base_model_path"])
     model = torch.load(model_path).to(device)
     opt = get_optimiser(model.parameters(), params)
+    best_MAP = 0
+    best_model = None
+    best_model_epoch = 0
     for epoch in range(params["epochs"]):
         train_av_loss, train_MAP = train_one_epoch(model, train_dataloader, opt, params)
         # The validation needs to stay in training mode to get the validation LOSS - which will be used for early stopping
@@ -188,4 +191,14 @@ def fit(params):
         mlflow.log_metric("valid-MAP", valid_MAP, epoch)
         logging.log(logging.INFO, f"EPOCH {epoch} valid loss: {valid_av_loss:.8f} | valid MAP: {valid_MAP:.3f} | train loss: "
               f"{train_av_loss:.8f} | train MAP: {train_MAP:.3f}")
-    return model
+        # keep a copy of the best model
+        if valid_MAP > best_MAP:
+            #TODO: This would be much better with the state dict
+            # e.g. best_model_state_dict = {k:v.to('cpu') for k, v in model.state_dict().items()}
+            logging.log(logging.INFO, f"New best model in epoch {epoch} with valid MAP score of {valid_MAP}")
+            model = model.to("cpu")
+            best_model = copy.deepcopy(model)
+            model = model.to(device)
+            best_model_epoch = epoch
+    mlflow.log_metric("best-epoch", best_model_epoch)
+    return best_model
