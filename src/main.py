@@ -95,10 +95,9 @@ def execute_models(params, use_cache=True):
     # Run validation
     # Here we read in model files and perform evaluation on them
 
-
 if __name__ == "__main__":
     # Set up logging and MLFlow tracking
-    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    # logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
     mlflow.set_tracking_uri("http://mlflow.dbs.ifi.lmu.de:5000")
     config_filename = sys.argv[1]
