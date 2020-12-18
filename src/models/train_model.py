@@ -153,7 +153,8 @@ def train_one_epoch(model, dataloader, opt, params):
         res = {target["image_id"].item(): output for target, output in zip(batch_targets, batch_outputs)}
         dets.update(res)
         # Push the losses back to the cpu
-        losses.append(batch_loss.item() * batch_size)
+        if batch_loss:
+            losses.append(batch_loss.item() * batch_size)
     # Now we average over the total number of values to get the average loss per sample
     av_loss = np.sum(losses) / len(dataloader.dataset)
     # Sometimes its nice to comment out training to test the pipeline. This is for that case. Otherwise gts should always
@@ -185,10 +186,14 @@ def fit(params):
     worse_model_count = 0
     best_valid_loss = 0
     for epoch in range(params["epochs"]):
-        train_av_loss, train_MAP = train_one_epoch(model, train_dataloader, opt, params)
+        model.train()
+        train_av_loss, _ = train_one_epoch(model, train_dataloader, opt, params)
         # The validation needs to stay in training mode to get the validation LOSS - which will be used for early stopping
         with torch.no_grad():
-            valid_av_loss, valid_MAP = train_one_epoch(model, valid_dataloader, False, params)
+            valid_av_loss, _ = train_one_epoch(model, valid_dataloader, False, params)
+        model.eval()
+        _, valid_MAP = train_one_epoch(model, valid_dataloader, False, params)
+        _, train_MAP = train_one_epoch(model, train_dataloader, False, params)
         # Logging
         mlflow.log_metric("train-loss", train_av_loss, epoch)
         mlflow.log_metric("valid-loss", valid_av_loss, epoch)
@@ -205,6 +210,7 @@ def fit(params):
             best_model = copy.deepcopy(model)
             model = model.to(device)
             best_model_epoch = epoch
+            best_MAP = valid_MAP
         # Now implement early stopping
         if valid_av_loss > best_valid_loss:
             worse_model_count += 1
