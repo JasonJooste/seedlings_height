@@ -139,9 +139,9 @@ def train_one_epoch(model, dataloader, opt, params):
         # Save copies of the targets before they're pushed to the gpu
         batch_gts = {gt["image_id"].item(): copy.deepcopy(gt) for gt in batch_targets}
         gts.update(batch_gts)
-        images = list(img.to(device) for img in batch_images)
+        batch_images = list(img.to(device) for img in batch_images)
         batch_targets = ([{k: v.to(device) for k, v in t.items()} for t in batch_targets])
-        batch_losses, batch_predictions = model(images, batch_targets)
+        batch_losses, batch_predictions = model(batch_images, batch_targets)
         batch_loss = sum(batch_losses.values())
         # Check if we're training here - if so we should update the gradients
         if opt:

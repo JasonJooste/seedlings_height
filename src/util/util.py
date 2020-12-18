@@ -41,6 +41,8 @@ def get_filenames(directory, ext, keep_ext=False, full_path=False):
     :param directory: The directory to search in
     :return: A list of filenames stripped of extensions
     """
+    #TODO: Correc tthis to using pathlib
+
     # First check if the directory exists
     directory = os.path.abspath(directory)
     if not os.path.exists(directory):
