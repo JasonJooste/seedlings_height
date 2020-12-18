@@ -193,7 +193,8 @@ def fit(params):
             valid_av_loss, _ = train_one_epoch(model, valid_dataloader, False, params)
         model.eval()
         _, valid_MAP = train_one_epoch(model, valid_dataloader, False, params)
-        _, train_MAP = train_one_epoch(model, train_dataloader, False, params)
+        train_MAP = -1
+        # _, train_MAP = train_one_epoch(model, train_dataloader, False, params)
         # Logging
         mlflow.log_metric("train-loss", train_av_loss, epoch)
         mlflow.log_metric("valid-loss", valid_av_loss, epoch)
@@ -219,5 +220,7 @@ def fit(params):
             if worse_model_count >= params["patience"]:
                 logger.log(logging.INFO, f"Stopped training early at epoch {epoch}")
                 break
+        else:
+            best_valid_loss = valid_av_loss
     mlflow.log_metric("best-epoch", best_model_epoch)
     return best_model
