@@ -223,9 +223,9 @@ def fit(params):
             #TODO: This would be much better with the state dict
             # e.g. best_model_state_dict = {k:v.to('cpu') for k, v in model.state_dict().items()}
             logger.log(logging.INFO, f"New best model in epoch {epoch} with valid MAP score of {valid_MAP}")
-            model = model.to("cpu")
-            best_model = copy.deepcopy(model)
-            model = model.to(device)
+            #TODO: This will NOT lead to consistent behaviour if the script is run on a cpu (because to leaves the values in the same memory position)
+            # Could do something here with Tensor.data_ptr()
+            best_model = model.detach().to("cpu")
             best_model_epoch = epoch
             best_MAP = valid_MAP
         # Now implement early stopping
