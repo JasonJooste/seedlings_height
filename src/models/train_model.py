@@ -178,7 +178,8 @@ def test_model(model, params):
         num_workers=params["dataloader_num_workers"],
         collate_fn=utils.collate_fn
     )
-    _, test_MAP = train_one_epoch(model.to("cuda:1"), test_dataloader, False, params)
+    device = get_device(params)
+    _, test_MAP = train_one_epoch(model.to(device), test_dataloader, False, params)
     return test_MAP
 
 
