@@ -4,14 +4,18 @@ import os
 
 import mlflow
 import torch
+from torch.utils.data import DataLoader
+
 import src.util.util as utils
 import sys
 import yaml
 import itertools
 from random import shuffle
-
+import pandas as pd
+from src.data.data_classes import SeedlingDataset
 from src.models.make_base_models import make_vanilla_model
 from src.models.train_model import fit
+from src.models.train_model import train_one_epoch
 from datetime import datetime
 import copy
 import pathlib
@@ -91,10 +95,30 @@ def execute_models(params, use_cache=True):
         this_config["trained_model_path"] = str(filename.with_suffix(".pt"))
         file = open(filename.with_suffix(".yaml"), 'w')
         yaml.dump(this_config, file)
+        # Test the final model
+        #TODO: Feed both validation and test data together
+        test_MAP = test_model(model, this_config)
+        mlflow.log_metric("test-MAP", test_MAP)
+        logger.log(logging.INFO, f"Final test score of model is {test_MAP}")
+        mlflow.end_run()
 
 
     # Run validation
     # Here we read in model files and perform evaluation on them
+def test_model(model, params):
+    test_file_path = base_dir.joinpath(params["test_file"])
+    test_data = pd.read_csv(test_file_path)
+    test_dataset = SeedlingDataset(test_data)
+    test_dataloader = DataLoader(
+        test_dataset,
+        batch_size=params["eval_batch_size"],
+        shuffle=False,
+        num_workers=params["dataloader_num_workers"],
+        collate_fn=utils.collate_fn
+    )
+    _, test_MAP = train_one_epoch(model.to("cuda:1"), test_dataloader, False, params)
+    return test_MAP
+
 
 if __name__ == "__main__":
     # Set up logging and MLFlow tracking
