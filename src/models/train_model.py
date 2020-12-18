@@ -230,15 +230,12 @@ def fit(params):
         # Now implement early stopping
         if valid_av_loss > best_valid_loss:
             worse_model_count += 1
-            print(f"Losing patience  bvl: {best_valid_loss} val: {valid_av_loss}")
-            print(f"Incrementing  {worse_model_count}")
             if not "patience" in params:
                 params["patience"] = params["epochs"]
             if worse_model_count >= params["patience"]:
                 logger.log(logging.INFO, f"Stopped training early at epoch {epoch}")
                 break
         else:
-            print("Resetting")
             best_valid_loss = valid_av_loss
             worse_model_count = 0
     mlflow.log_metric("best-epoch", best_model_epoch)
