@@ -1,5 +1,6 @@
 import copy
 import logging
+import math
 import pathlib
 
 import torch
@@ -166,6 +167,20 @@ def train_one_epoch(model, dataloader, opt, params):
         MAP = 0
     return av_loss, MAP
 
+def test_model(model, params):
+    test_file_path = base_dir.joinpath(params["test_file"])
+    test_data = pd.read_csv(test_file_path)
+    test_dataset = SeedlingDataset(test_data)
+    test_dataloader = DataLoader(
+        test_dataset,
+        batch_size=params["eval_batch_size"],
+        shuffle=False,
+        num_workers=params["dataloader_num_workers"],
+        collate_fn=utils.collate_fn
+    )
+    _, test_MAP = train_one_epoch(model.to("cuda:1"), test_dataloader, False, params)
+    return test_MAP
+
 
 def fit(params):
     """
@@ -184,7 +199,7 @@ def fit(params):
     best_model_epoch = 0
     # Early stopping vars
     worse_model_count = 0
-    best_valid_loss = 0
+    best_valid_loss = math.inf
     for epoch in range(params["epochs"]):
         model.train()
         train_av_loss, _ = train_one_epoch(model, train_dataloader, opt, params)
@@ -215,12 +230,20 @@ def fit(params):
         # Now implement early stopping
         if valid_av_loss > best_valid_loss:
             worse_model_count += 1
+            print(f"Losing patience  bvl: {best_valid_loss} val: {valid_av_loss}")
+            print(f"Incrementing  {worse_model_count}")
             if not "patience" in params:
                 params["patience"] = params["epochs"]
             if worse_model_count >= params["patience"]:
                 logger.log(logging.INFO, f"Stopped training early at epoch {epoch}")
                 break
         else:
+            print("Resetting")
             best_valid_loss = valid_av_loss
+            worse_model_count = 0
     mlflow.log_metric("best-epoch", best_model_epoch)
+    # Test the final model on the test set
+    test_MAP = test_model(best_model, params)
+    mlflow.log_metric("test-MAP", test_MAP)
+    logger.log(logging.INFO, f"Final test score of model is {test_MAP}")
     return best_model

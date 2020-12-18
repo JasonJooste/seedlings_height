@@ -39,6 +39,8 @@ def get_existing_config(this_config, existing_configs, config_filenames):
     for ind, match in enumerate(matches):
         if match:
             new_match_dict = existing_configs[ind]
+            if not new_match_dict["trained_model_path"]:
+                logger.log(logging.WARN, f"Config file doesn't contain the trained path: {config_filenames[ind]}")
             del new_match_dict["trained_model_path"]
             # Just double checking that the previous matching worked
             assert match_dict is None or match_dict == new_match_dict
@@ -76,8 +78,8 @@ def execute_models(params, use_cache=True):
         # Set the seed
         utils.set_seed(this_config["seed"])
         # The model doesn't exist yet - train it
-        logger.log(logging.INFO,"=======================================================================================================")
-        logger.log(logging.INFO,f"Training new config: {this_config}")
+        logger.log(logging.INFO, "=======================================================================================================")
+        logger.log(logging.INFO, f"Training new config: {this_config}")
         # Set up MLFlow tracking of this config
         mlflow.set_experiment(experiment_name=this_config["task_name"])
         mlflow.start_run()
@@ -95,29 +97,7 @@ def execute_models(params, use_cache=True):
         this_config["trained_model_path"] = str(filename.with_suffix(".pt"))
         file = open(filename.with_suffix(".yaml"), 'w')
         yaml.dump(this_config, file)
-        # Test the final model
-        #TODO: Feed both validation and test data together
-        test_MAP = test_model(model, this_config)
-        mlflow.log_metric("test-MAP", test_MAP)
-        logger.log(logging.INFO, f"Final test score of model is {test_MAP}")
         mlflow.end_run()
-
-
-    # Run validation
-    # Here we read in model files and perform evaluation on them
-def test_model(model, params):
-    test_file_path = base_dir.joinpath(params["test_file"])
-    test_data = pd.read_csv(test_file_path)
-    test_dataset = SeedlingDataset(test_data)
-    test_dataloader = DataLoader(
-        test_dataset,
-        batch_size=params["eval_batch_size"],
-        shuffle=False,
-        num_workers=params["dataloader_num_workers"],
-        collate_fn=utils.collate_fn
-    )
-    _, test_MAP = train_one_epoch(model.to("cuda:1"), test_dataloader, False, params)
-    return test_MAP
 
 
 if __name__ == "__main__":
