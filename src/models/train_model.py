@@ -148,7 +148,7 @@ def train_one_epoch(model, dataloader, opt, params):
             opt.step()
             opt.zero_grad()
         # Push the results back to cpu
-        batch_outputs = [{k: v.to("cpu") for k, v in t.items()} for t in batch_predictions]
+        batch_outputs = [{k: v.detach().to("cpu") for k, v in t.items()} for t in batch_predictions]
         # Map IDs to outputs
         res = {target["image_id"].item(): output for target, output in zip(batch_targets, batch_outputs)}
         dets.update(res)
