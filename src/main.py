@@ -109,9 +109,10 @@ if __name__ == "__main__":
     config_file = open(config_filename, 'r')
     params = yaml.load(config_file)
     use_cache = False
-    for i in range(6):
-        template_dir = base_dir / "models" / "templates"
-        make_vanilla_model(template_dir, trainable_backbone_layers=i)
+    for pretrained in [True, False]:
+        for i in range(6):
+            template_dir = base_dir / "models" / "templates"
+            make_vanilla_model(template_dir, pretrained=pretrained, trainable_backbone_layers=i)
     execute_models(params, use_cache)
 
 
