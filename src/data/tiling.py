@@ -48,7 +48,7 @@ def resize_files(fn1, fn2):
     new_file = base_dir / "data" / "interim" / new_filename
     skim.io.imsave(new_file, new_im_arr)
 
-def split_images(filename, new_path,  slice_w=512, slice_h=512):
+def split_images(filename, new_path,  slice_w=256, slice_h=256):
     """
     Split a large image into a series of small tiles and save them
     :return:
@@ -61,6 +61,10 @@ def split_images(filename, new_path,  slice_w=512, slice_h=512):
     while pos_y < im_h:
         while pos_x < im_w:
             im_sec = image[pos_y:pos_y+slice_h, pos_x:pos_x+slice_w]
+            #TODO: This would be much prettier just in the loop
+            if im_sec.shape[0] != slice_h or im_sec.shape[1] != slice_w:
+                pos_x += slice_w
+                continue
             new_filename = new_path.stem + f"_cut-{pos_x}-{pos_y}" + new_path.suffix
             new_filepath = new_path.parent / new_filename
             skim.io.imsave(new_filepath, im_sec)
