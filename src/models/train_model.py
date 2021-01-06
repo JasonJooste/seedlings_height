@@ -133,15 +133,16 @@ def train_one_epoch(model, dataloader, opt, params):
     losses = []
     # Just a placeholder
     img_size = (256, 256)
-    for batch_images, batch_targets, _ in dataloader:
+    for batch_images, batch_heights, batch_targets, _ in dataloader:
         batch_size = len(batch_images)
         img_size = batch_images[0].shape
         # Save copies of the targets before they're pushed to the gpu
         batch_gts = {gt["image_id"].item(): copy.deepcopy(gt) for gt in batch_targets}
         gts.update(batch_gts)
         batch_images = list(img.to(device) for img in batch_images)
+        batch_heights = list(img.to(device) for img in batch_heights)
         batch_targets = ([{k: v.to(device) for k, v in t.items()} for t in batch_targets])
-        batch_losses, batch_predictions = model(batch_images, batch_targets)
+        batch_losses, batch_predictions = model(batch_images, batch_heights, batch_targets)
         batch_loss = sum(batch_losses.values())
         # Check if we're training here - if so we should update the gradients
         if opt:
@@ -195,7 +196,7 @@ def fit(params):
     model = torch.load(model_path).to(device)
     opt = get_optimiser(model.parameters(), params)
     # Model saving vars
-    best_MAP = 0
+    best_MAP = -1
     best_model = None
     best_model_epoch = 0
     # Early stopping vars
@@ -223,9 +224,9 @@ def fit(params):
             #TODO: This would be much better with the state dict
             # e.g. best_model_state_dict = {k:v.to('cpu') for k, v in model.state_dict().items()}
             logger.log(logging.INFO, f"New best model in epoch {epoch} with valid MAP score of {valid_MAP}")
-            #TODO: This will NOT lead to consistent behaviour if the script is run on a cpu (because to leaves the values in the same memory position)
-            # Could do something here with Tensor.data_ptr()
-            best_model = model.detach().to("cpu")
+            model = model.to("cpu")
+            best_model = copy.deepcopy(model)
+            model = model.to(device)
             best_model_epoch = epoch
             best_MAP = valid_MAP
         # Now implement early stopping

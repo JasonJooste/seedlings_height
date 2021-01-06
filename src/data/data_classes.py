@@ -35,36 +35,35 @@ class SeedlingDataset(Dataset):
         id = self.datafiles["id"].iloc[index]
         records = self.img_boxes[self.img_boxes["id"] == id]
         # Read in the colour image
-        img_path = self.datafiles.loc[self.datafiles["id"] == id, "im_filename", "height_filename"]
-        assert len(img_path) == 1, "There should only be one match"
-        img_path = img_path.iloc[0, 0]
+        paths = self.datafiles.loc[self.datafiles["id"] == id, ["im_filename", "height_filename"]]
+        assert len(paths) == 1, "There should only be one match"
+        img_path = paths.iloc[0, 0]
         image = cv2.imread(img_path, cv2.IMREAD_COLOR)
         assert image is not None, "The image should exist"
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         # Scale to 0-1 space
         image = image / COLOUR_MAX
-        image = torch.Tensor(image)
+        image = torch.tensor(image, dtype=torch.float)
         # Rearrange image - pytorch standard models expect channel dimension first
         image = image.permute((2, 0, 1))
         # Read in the height map
-        height_path = img_path.iloc[0, 1]
+        height_path = paths.iloc[0, 1]
         height_image = cv2.imread(height_path, cv2.IMREAD_UNCHANGED)
         height_image = height_image / HEIGHT_MAX
-        height_image = torch.Tensor(height_image)
-        # Concatenate the channels together
-        total_image = torch.cat((image, height_image.unsqueeze(2)), 2)
+        height_image = torch.tensor(height_image, dtype=torch.float)
+        height_image = height_image.unsqueeze(0)
         # Now the labels
         labels = torch.ones((records.shape[0],), dtype=torch.int64)
         iscrowd = torch.zeros((records.shape[0],), dtype=torch.int64)
         # TODO: Put this into coco format straight away? Might be some overhead with uploading unncessary stuff to the GPU...
         target = {}
         target["image_id"] = torch.tensor(index)
-        target["boxes"] = torch.Tensor(records[["xmin", "ymin", "xmax", "ymax"]].values)
+        target["boxes"] = torch.tensor(records[["xmin", "ymin", "xmax", "ymax"]].values, dtype=torch.float)
         areas = (records["xmax"] - records["xmin"]) * (records["ymax"] - records["ymin"])
-        target["area"] = torch.Tensor(areas.values)
+        target["area"] = torch.tensor(areas.values, dtype=torch.float)
         target["labels"] = labels
         target["iscrowd"] = iscrowd
-        return total_image, height_image, target, id
+        return image, height_image, target, id
 
     def _read_boxes(self):
         # First get a list of boxes for each file
