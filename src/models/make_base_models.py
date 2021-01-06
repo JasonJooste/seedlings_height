@@ -1,7 +1,7 @@
 import torch
 import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor, TwoMLPHead
-from src.models.modifications import RoIHeadsFinalLayer, FasterRCNNEndHeights, RoIHeadsVanilla
+from src.models.modifications import RoIHeadsFinalLayer, FasterRCNNEndHeights, RoIHeadsVanilla, FasterRCNNStartHeights
 from torch import nn
 
 NUM_CLASSES = 2
@@ -48,3 +48,24 @@ def make_final_layer_model(model_dir, pretrained=True, trainable_backbone_layers
     torch.save(model, path)
 
 
+def make_first_layer_model(model_dir, pretrained=True, trainable_backbone_layers=0):
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=pretrained,
+                                                                 trainable_backbone_layers=trainable_backbone_layers)
+    # Change the model class so the model uses our forward function
+    model.__class__ = FasterRCNNStartHeights
+    # Don't need to change the roi_heads. Everything is normal there
+    model.roi_heads.__class__ = RoIHeadsVanilla
+    # Rebuild first conv layer of the backbone to accept one extra layer
+    new_shape = list(model.backbone.body.conv1.weight.shape)
+    new_shape[1] = 1
+    new_weights = torch.randn(new_shape)
+    extended_weights = torch.cat((model.backbone.body.conv1.weight, new_weights), 1)
+    model.backbone.body.conv1.weight = nn.Parameter(extended_weights)
+    # Assign a new class prediction layer for two classes
+    representation_size = model.roi_heads.box_predictor.cls_score.in_features
+    model.roi_heads.box_predictor.cls_score = nn.Linear(representation_size, NUM_CLASSES)
+    if pretrained:
+        path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_pretrained_first.pt"
+    else:
+        path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_no_pretraining_first.pt"
+    torch.save(model, path)
