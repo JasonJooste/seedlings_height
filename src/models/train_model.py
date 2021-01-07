@@ -242,7 +242,7 @@ def fit(params):
             worse_model_count = 0
     mlflow.log_metric("best-epoch", best_model_epoch)
     # Test the final model on the test set
-    test_MAP = test_model(best_model, params)
+    test_MAP = test_model(best_model, params).item()
     mlflow.log_metric("test-MAP", test_MAP)
     logger.log(logging.INFO, f"Final test score of model is {test_MAP}")
-    return best_model
+    return best_model, best_model_epoch, test_MAP

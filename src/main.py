@@ -31,6 +31,8 @@ def get_existing_config(this_config, existing_configs, config_filenames):
     without_model_path = copy.deepcopy(existing_configs)
     for dict in without_model_path:
         del dict["trained_model_path"]
+        del dict["best_model_epoch"]
+        del dict["test_MAP"]
     # Compare the dictionaries to find a match
     matches = [this_config == config for config in without_model_path]
     # If there's are matches then return all filenames that match it
@@ -86,7 +88,7 @@ def execute_models(params, use_cache=True):
         for param, val in this_config.items():
             mlflow.log_param(param, val)
         # Fit model
-        model = fit(this_config)
+        model, best_model_epoch, test_MAP = fit(this_config)
         mlflow.end_run()
         # Save the model file
         filename = gen_model_filename(this_config, ind)
@@ -95,6 +97,8 @@ def execute_models(params, use_cache=True):
         torch.save(model, filename.with_suffix(".pt"))
         # Save the config file
         this_config["trained_model_path"] = str(filename.with_suffix(".pt"))
+        this_config["best_model_epoch"] = best_model_epoch
+        this_config["test_MAP"] = test_MAP
         file = open(filename.with_suffix(".yaml"), 'w')
         yaml.dump(this_config, file)
         mlflow.end_run()

@@ -5,7 +5,7 @@
 #################### MODEL LOCATION ####################
 'model_type': ["RCNN"]
 'model_name': ["RCNN-resnet-50"]
-'base_model_path': ["models/templates/RCNN-resnet-50_5_layer_pretrained_first.pt", "models/templates/RCNN-resnet-50_5_layer_pretrained_last.pt","models/templates/RCNN-resnet-50_5_layer_pretrained.pt",]
+'base_model_path': ["models/templates/RCNN-resnet-50_5_layer_pretrained_first.pt", "models/templates/RCNN-resnet-50_5_layer_pretrained_final.pt","models/templates/RCNN-resnet-50_5_layer_pretrained.pt",]
 'output_dir': ["models/trained"]
 #################### TASK ####################
 'task_name': ["seedlings_first_last_test"]
