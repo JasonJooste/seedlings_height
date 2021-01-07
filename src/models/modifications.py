@@ -20,12 +20,11 @@ class RoIHeadsVanilla(RoIHeads):
     """
     The RoIHeads class for integration of height data in the final NN layer
     """
-
     def forward(self,
-                features,  # type: Dict[str, Tensor]   # type: Tensor
-                proposals,  # type: List[Tensor]
+                features,      # type: Dict[str, Tensor]
+                proposals,     # type: List[Tensor]
                 image_shapes,  # type: List[Tuple[int, int]]
-                targets=None  # type: Optional[List[Dict[str, Tensor]]]
+                targets=None   # type: Optional[List[Dict[str, Tensor]]]
                 ):
         # type: (...) -> Tuple[List[Dict[str, Tensor]], Dict[str, Tensor]]
         """
@@ -45,35 +44,44 @@ class RoIHeadsVanilla(RoIHeads):
                     assert t["keypoints"].dtype == torch.float32, 'target keypoints must of float type'
 
         if self.training:
+            # Get proposals and match them to targets
             proposals, matched_idxs, labels, regression_targets = self.select_training_samples(proposals, targets)
         else:
             labels = None
             regression_targets = None
             matched_idxs = None
+        # Extract the feature maps for each proposal using roi pooling
         box_features = self.box_roi_pool(features, proposals, image_shapes)
+        # This has two fully connected layers
         box_features = self.box_head(box_features)
+        # We now have the two heads - one for classification and one for the boxes of each class
         class_logits, box_regression = self.box_predictor(box_features)
+
         result = torch.jit.annotate(List[Dict[str, torch.Tensor]], [])
         losses = {}
         if self.training:
             assert labels is not None and regression_targets is not None
+            # Calculate the loss
             loss_classifier, loss_box_reg = fastrcnn_loss(
                 class_logits, box_regression, labels, regression_targets)
             losses = {
                 "loss_classifier": loss_classifier,
                 "loss_box_reg": loss_box_reg
             }
-        else:
-            boxes, scores, labels = self.postprocess_detections(class_logits, box_regression, proposals, image_shapes)
-            num_images = len(boxes)
-            for i in range(num_images):
-                result.append(
-                    {
-                        "boxes": boxes[i],
-                        "labels": labels[i],
-                        "scores": scores[i],
-                    }
-                )
+        # else:
+        boxes, scores, labels = self.postprocess_detections(class_logits, box_regression, proposals, image_shapes)
+        num_images = len(boxes)
+        for i in range(num_images):
+            result.append(
+                {
+                    "boxes": boxes[i],
+                    "labels": labels[i],
+                    "scores": scores[i],
+                }
+            )
+        # We are not dealing with masks or keypoints
+        assert not self.has_mask(), "This functionality is not supported"
+        assert self.keypoint_roi_pool is None, "This functionality is not supported"
         return result, losses
 
 class RoIHeadsFinalLayer(RoIHeads):
@@ -225,7 +233,7 @@ class FasterRCNNVanilla(FasterRCNN):
     Wrapper around the standard class that can take the height argument (and ignore it)
     """
     def forward(self, images, heights, targets=None):
-        super(FasterRCNNVanilla).forward(images, targets)
+        return super().forward(images, targets)
 
 class FasterRCNNStartHeights(FasterRCNN):
     def forward(self, images, heights, targets=None):
@@ -243,10 +251,11 @@ class FasterRCNNStartHeights(FasterRCNN):
 
         """
         # Add an extra channel to the images here
+        im_num = 0
         for image, height_map in zip(images, heights):
             image = torch.cat((image, height_map), 0)
-            images[0] = image
-        print([image.shape for image in images])
+            images[im_num] = image
+            im_num += 1
         if self.training and targets is None:
             raise ValueError("In training mode, targets should be passed")
         if self.training:
@@ -261,7 +270,6 @@ class FasterRCNNStartHeights(FasterRCNN):
                 else:
                     raise ValueError("Expected target boxes to be of type "
                                      "Tensor, got {:}.".format(type(boxes)))
-
         original_image_sizes = torch.jit.annotate(List[Tuple[int, int]], [])
         for img in images:
             val = img.shape[-2:]
@@ -288,8 +296,8 @@ class FasterRCNNStartHeights(FasterRCNN):
         if isinstance(features, torch.Tensor):
             features = OrderedDict([('0', features)])
         proposals, proposal_losses = self.rpn(images, features, targets)
-        # This is the only difference to the forward function - we feed the heights parameter in here
-        detections, detector_losses = self.roi_heads(features, heights, proposals, images.image_sizes, targets)
+        # No heights needed here - the height data was fed directly into the backbone
+        detections, detector_losses = self.roi_heads(features, proposals, images.image_sizes, targets)
         detections = self.transform.postprocess(detections, images.image_sizes, original_image_sizes)
         losses = {}
         losses.update(detector_losses)

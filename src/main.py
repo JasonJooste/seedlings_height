@@ -13,7 +13,7 @@ import itertools
 from random import shuffle
 import pandas as pd
 from src.data.data_classes import SeedlingDataset
-from src.models.make_base_models import make_vanilla_model
+from src.models.make_base_models import make_vanilla_model, make_final_layer_model, make_first_layer_model
 from src.models.train_model import fit
 from src.models.train_model import train_one_epoch
 from datetime import datetime
@@ -109,10 +109,14 @@ if __name__ == "__main__":
     config_file = open(config_filename, 'r')
     params = yaml.load(config_file)
     use_cache = False
-    for pretrained in [True, False]:
-        for i in range(6):
-            template_dir = base_dir / "models" / "templates"
-            make_vanilla_model(template_dir, pretrained=pretrained, trainable_backbone_layers=i)
+    template_dir = base_dir / "models" / "templates"
+    make_vanilla_model(template_dir, pretrained=True, trainable_backbone_layers=5)
+    make_final_layer_model(template_dir, pretrained=True, trainable_backbone_layers=5)
+    make_first_layer_model(template_dir, pretrained=True, trainable_backbone_layers=5)
+    # for pretrained in [True, False]:
+    #     for i in range(6):
+    #         template_dir = base_dir / "models" / "templates"
+    #         make_vanilla_model(template_dir, pretrained=pretrained, trainable_backbone_layers=i)
     execute_models(params, use_cache)
 
 
