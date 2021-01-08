@@ -71,6 +71,11 @@ def execute_models(params, use_cache=True):
     shuffle(search_list)
     # Run training
     for ind, this_config in enumerate(search_list):
+        filename = gen_model_filename(this_config, ind)
+        #Set up logging for this run
+        handler = logging.FileHandler(filename.with_suffix(".log"))
+        root_logger = logging.getLogger()
+        root_logger.addHandler(handler)
         # Check for existing model files
         (existing_config, config_fn) = get_existing_config(this_config, existing_configs, existing_config_fns)
         if use_cache and existing_config:
@@ -91,8 +96,6 @@ def execute_models(params, use_cache=True):
         model, best_model_epoch, test_MAP = fit(this_config)
         mlflow.end_run()
         # Save the model file
-        filename = gen_model_filename(this_config, ind)
-        # print(filename)
         filename.with_suffix(".pt")
         torch.save(model, filename.with_suffix(".pt"))
         # Save the config file
@@ -102,12 +105,15 @@ def execute_models(params, use_cache=True):
         file = open(filename.with_suffix(".yaml"), 'w')
         yaml.dump(this_config, file)
         mlflow.end_run()
+        # Stop the log to file
+        root_logger.handlers.pop()
 
 
 if __name__ == "__main__":
     # Set up logging and MLFlow tracking
     # logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    # logging.basicConfig(stream=sys.stderr, level=logging.ERROR)
     mlflow.set_tracking_uri("http://mlflow.dbs.ifi.lmu.de:5000")
     config_filename = sys.argv[1]
     config_file = open(config_filename, 'r')

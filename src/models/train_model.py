@@ -217,7 +217,7 @@ def fit(params):
         mlflow.log_metric("valid-loss", valid_av_loss, epoch)
         mlflow.log_metric("train-MAP", train_MAP, epoch)
         mlflow.log_metric("valid-MAP", valid_MAP, epoch)
-        logging.log(logging.INFO, f"EPOCH {epoch} valid loss: {valid_av_loss:.8f} | valid MAP: {valid_MAP:.3f} | train loss: "
+        logger.log(logging.INFO, f"EPOCH {epoch} valid loss: {valid_av_loss:.8f} | valid MAP: {valid_MAP:.3f} | train loss: "
               f"{train_av_loss:.8f} | train MAP: {train_MAP:.3f}")
         # keep a copy of the best model
         if valid_MAP > best_MAP:
