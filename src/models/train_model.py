@@ -135,7 +135,9 @@ def train_one_epoch(model, dataloader, opt, params):
     device = get_device(params)
     dets = {}
     gts = {}
-    losses = []
+    num_rows = math.ceil(len(dataloader.dataset) / dataloader.batch_size)
+    losses = np.zeros((num_rows,4))
+    batch_num = 0
     # Just a placeholder
     img_size = (256, 256)
     for batch_images, batch_heights, batch_targets, _ in dataloader:
@@ -161,9 +163,16 @@ def train_one_epoch(model, dataloader, opt, params):
         dets.update(res)
         # Push the losses back to the cpu
         if batch_loss:
-            losses.append(batch_loss.item() * batch_size)
+            # Record the individual loss components
+            losses[batch_num, :] = [val.item() * batch_size for val in batch_losses.values()]
+        batch_num += 1
     # Now we average over the total number of values to get the average loss per sample
-    av_loss = np.sum(losses) / len(dataloader.dataset)
+    av_loss = np.sum(losses, 0) / len(dataloader.dataset)
+    # Convert back to dict with named losses
+    named_losses = {}
+    for ind, loss_name in enumerate(batch_losses.keys()):
+        named_losses[loss_name] = av_loss[ind]
+    named_losses["loss_total"] = np.sum(av_loss)
     # Sometimes its nice to comment out training to test the pipeline. This is for that case. Otherwise gts should always
     # be populated
     if gts:
@@ -171,7 +180,7 @@ def train_one_epoch(model, dataloader, opt, params):
         MAP = get_MAP(gts, dets, img_size)
     else:
         MAP = 0
-    return av_loss, MAP
+    return named_losses, MAP
 
 def test_model(model, params):
     test_file_path = base_dir.joinpath(params["test_file"])
@@ -218,6 +227,7 @@ def fit(params):
             _, valid_MAP = train_one_epoch(model, valid_dataloader, False, params)
             train_MAP = -1
             # _, train_MAP = train_one_epoch(model, train_dataloader, False, params)
+            # Logging
             mlflow.log_metric("train-loss", train_av_loss, epoch)
             mlflow.log_metric("valid-loss", valid_av_loss, epoch)
             mlflow.log_metric("train-MAP", train_MAP, epoch)
@@ -226,7 +236,7 @@ def fit(params):
                   f"{train_av_loss:.8f} | train MAP: {train_MAP:.3f}")
             # keep a copy of the best model
             if valid_MAP > best_MAP:
-                # TODO: This would be much better with the state dict
+                #TODO: This would be much better with the state dict
                 # e.g. best_model_state_dict = {k:v.to('cpu') for k, v in model.state_dict().items()}
                 logger.log(logging.INFO, f"New best model in epoch {epoch} with valid MAP score of {valid_MAP}")
                 model = model.to("cpu")
@@ -245,7 +255,6 @@ def fit(params):
             else:
                 best_valid_loss = valid_av_loss
                 worse_model_count = 0
-        mlflow.log_metric("best_epoch", best_model_epoch)
     except Exception as err:
         mlflow.log_metric("error", True)
         if params["develop"]:
@@ -254,6 +263,7 @@ def fit(params):
         else:
             # During deployment we want the model testing to be robust to unexpected errors
             logger.exception(err)
+    mlflow.log_metric("best-epoch", best_model_epoch)
     # Test the final model on the test set
     if best_model:
         test_MAP = test_model(best_model, params).item()

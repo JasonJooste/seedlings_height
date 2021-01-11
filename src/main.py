@@ -29,10 +29,10 @@ def get_existing_config(this_config, existing_configs, config_filenames):
     assert len(existing_configs) == len(config_filenames)
     # Each config file has one extra entry: Model_path. This needs to be removed before comparison
     without_model_path = copy.deepcopy(existing_configs)
-    for dict in without_model_path:
-        del dict["trained_model_path"]
-        del dict["best_model_epoch"]
-        del dict["test_MAP"]
+    for conf_dict in without_model_path:
+        conf_dict.pop("trained_model_path", None)
+        conf_dict.pop("best_model_epoch", None)
+        conf_dict.pop("test_MAP", None)
     # Compare the dictionaries to find a match
     matches = [this_config == config for config in without_model_path]
     # If there's are matches then return all filenames that match it
