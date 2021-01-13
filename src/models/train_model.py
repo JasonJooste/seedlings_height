@@ -228,12 +228,17 @@ def fit(params):
             train_MAP = -1
             # _, train_MAP = train_one_epoch(model, train_dataloader, False, params)
             # Logging
+
             for loss_name, av_loss in train_av_losses.items():
                 mlflow.log_metric(f"train-{loss_name}", av_loss, epoch)
             for loss_name, av_loss in valid_av_losses.items():
                 mlflow.log_metric(f"valid-{loss_name}", av_loss, epoch)
+
+
             #TODO: Remove
-            mlflow.log_metric("test-MAP", test_model(model, params).item())
+            mlflow.log_metric("test-MAP-step", test_model(model, params).item())
+
+
             mlflow.log_metric("train-MAP", train_MAP, epoch)
             mlflow.log_metric("valid-MAP", valid_MAP, epoch)
             logger.log(logging.INFO, f"EPOCH {epoch} valid loss: {valid_av_losses['loss_total']:.8f} | valid MAP: {valid_MAP:.3f} | train loss: "
