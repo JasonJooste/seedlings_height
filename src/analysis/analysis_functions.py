@@ -89,8 +89,3 @@ def get_run_metric_data(run_id: str) -> pd.DataFrame:
     # Needs a list around the values to make this a row instead of a column
     run_df = pd.DataFrame([values], columns=index)
     return run_df
-
-mlflow.set_tracking_uri("http://mlflow.dbs.ifi.lmu.de:5000")
-results_df = get_dataframe(base_dir / "models/trained")
-results_df = get_runs_data(results_df)
-print(results_df)
