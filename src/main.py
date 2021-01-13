@@ -33,6 +33,8 @@ def get_existing_config(this_config, existing_configs, config_filenames):
         conf_dict.pop("trained_model_path", None)
         conf_dict.pop("best_model_epoch", None)
         conf_dict.pop("test_MAP", None)
+        conf_dict.pop("run_id", None)
+        conf_dict.pop("experiment_id", None)
     # Compare the dictionaries to find a match
     matches = [this_config == config for config in without_model_path]
     # If there's are matches then return all filenames that match it
@@ -65,7 +67,7 @@ def execute_models(params, use_cache=True):
     existing_configs = []
     for filename in existing_config_fns:
         with open(filename, 'r') as file:
-            existing_configs.append(yaml.load(file))
+            existing_configs.append(yaml.safe_load(file))
     # Get list of individual tasks
     search_list = [dict(zip(params.keys(), values)) for values in itertools.product(*params.values())]
     shuffle(search_list)
@@ -89,7 +91,7 @@ def execute_models(params, use_cache=True):
         logger.log(logging.INFO, f"Training new config: {this_config}")
         # Set up MLFlow tracking of this config
         mlflow.set_experiment(experiment_name=this_config["task_name"])
-        mlflow.start_run()
+        this_run = mlflow.start_run()
         for param, val in this_config.items():
             mlflow.log_param(param, val)
         # Fit model
@@ -102,6 +104,8 @@ def execute_models(params, use_cache=True):
         this_config["trained_model_path"] = str(filename.with_suffix(".pt"))
         this_config["best_model_epoch"] = best_model_epoch
         this_config["test_MAP"] = test_MAP
+        this_config["run_id"] = this_run.info.run_id
+        this_config["experiment_id"] = this_run.info.run_id
         file = open(filename.with_suffix(".yaml"), 'w')
         yaml.dump(this_config, file)
         mlflow.end_run()
