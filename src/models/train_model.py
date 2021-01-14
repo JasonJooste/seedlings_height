@@ -210,7 +210,6 @@ def fit(params):
             with torch.no_grad():
                 valid_av_loss, _ = train_one_epoch(model, valid_dataloader, False, params)
             model.eval()
-            assert False
             _, valid_MAP = train_one_epoch(model, valid_dataloader, False, params)
             train_MAP = -1
             # _, train_MAP = train_one_epoch(model, train_dataloader, False, params)
