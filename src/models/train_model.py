@@ -219,6 +219,7 @@ def fit(params):
             with torch.no_grad():
                 valid_av_losses, _ = train_one_epoch(model, valid_dataloader, False, params)
             model.eval()
+            assert False
             _, valid_MAP = train_one_epoch(model, valid_dataloader, False, params)
             train_MAP = -1
             # _, train_MAP = train_one_epoch(model, train_dataloader, False, params)
@@ -247,14 +248,17 @@ def fit(params):
                 worse_model_count = 0
         mlflow.log_metric("best_epoch", best_model_epoch)
     except Exception as err:
-        if params["debug"]:
+        if params["develop"]:
             # If we're in development we want errors to halt execution (they can be silly errors)
             raise err
         else:
             # During deployment we want the model testing to be robust to unexpected errors
-            logger.log(logging.CRITICAL, str(err))
+            logger.exception(err)
     # Test the final model on the test set
-    test_MAP = test_model(best_model, params).item()
+    if best_model:
+        test_MAP = test_model(best_model, params).item()
+    else:
+        test_MAP = -1
     mlflow.log_metric("test_MAP", test_MAP)
     logger.log(logging.INFO, f"Final test score of model is {test_MAP}")
     return best_model, best_model_epoch, test_MAP

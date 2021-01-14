@@ -113,10 +113,11 @@ if __name__ == "__main__":
     config_filename = sys.argv[1]
     config_file = open(config_filename, 'r')
     params = yaml.load(config_file)
-    if not "debug" in params:
-        params["debug"] = [False]
+    if not "develop" in params:
+        params["develop"] = [True]
+        # Too much logging from packages still.
+        # logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     # Set up logging and MLFlow tracking
-    # logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
     # logging.basicConfig(stream=sys.stderr, level=logging.ERROR)
     mlflow.set_tracking_uri("http://mlflow.dbs.ifi.lmu.de:5000")
