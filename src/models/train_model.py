@@ -130,9 +130,7 @@ def train_one_epoch(model, dataloader, opt, params):
     device = get_device(params)
     dets = {}
     gts = {}
-    num_rows = math.ceil(len(dataloader.dataset) / dataloader.batch_size)
-    losses = np.zeros((num_rows,4))
-    batch_num = 0
+    losses = []
     # Just a placeholder
     img_size = (256, 256)
     for batch_images, batch_heights, batch_targets, _ in dataloader:
@@ -158,16 +156,9 @@ def train_one_epoch(model, dataloader, opt, params):
         dets.update(res)
         # Push the losses back to the cpu
         if batch_loss:
-            # Record the individual loss components
-            losses[batch_num, :] = [val.item() * batch_size for val in batch_losses.values()]
-        batch_num += 1
+            losses.append(batch_loss.item() * batch_size)
     # Now we average over the total number of values to get the average loss per sample
-    av_loss = np.sum(losses, 0) / len(dataloader.dataset)
-    # Convert back to dict with named losses
-    named_losses = {}
-    for ind, loss_name in enumerate(batch_losses.keys()):
-        named_losses[loss_name] = av_loss[ind]
-    named_losses["loss_total"] = np.sum(av_loss)
+    av_loss = np.sum(losses) / len(dataloader.dataset)
     # Sometimes its nice to comment out training to test the pipeline. This is for that case. Otherwise gts should always
     # be populated
     if gts:
@@ -175,7 +166,7 @@ def train_one_epoch(model, dataloader, opt, params):
         MAP = get_MAP(gts, dets, img_size)
     else:
         MAP = 0
-    return named_losses, MAP
+    return av_loss, MAP
 
 def test_model(model, params):
     test_file_path = base_dir.joinpath(params["test_file"])
@@ -214,21 +205,25 @@ def fit(params):
     try:
         for epoch in range(params["epochs"]):
             model.train()
-            train_av_losses, _ = train_one_epoch(model, train_dataloader, opt, params)
+            train_av_loss, _ = train_one_epoch(model, train_dataloader, opt, params)
             # The validation needs to stay in training mode to get the validation LOSS - which will be used for early stopping
             with torch.no_grad():
-                valid_av_losses, _ = train_one_epoch(model, valid_dataloader, False, params)
+                valid_av_loss, _ = train_one_epoch(model, valid_dataloader, False, params)
             model.eval()
             assert False
             _, valid_MAP = train_one_epoch(model, valid_dataloader, False, params)
             train_MAP = -1
             # _, train_MAP = train_one_epoch(model, train_dataloader, False, params)
-            mlflow.log_metric("train_MAP", train_MAP, epoch)
-            mlflow.log_metric("valid_MAP", valid_MAP, epoch)
-            logger.log(logging.INFO, f"EPOCH {epoch} valid loss: {valid_av_losses['loss_total']:.8f} | valid MAP: {valid_MAP:.3f} | train loss: "
-                  f"{train_av_losses['loss_total']:.8f} | train MAP: {train_MAP:.3f}")
+            mlflow.log_metric("train-loss", train_av_loss, epoch)
+            mlflow.log_metric("valid-loss", valid_av_loss, epoch)
+            mlflow.log_metric("train-MAP", train_MAP, epoch)
+            mlflow.log_metric("valid-MAP", valid_MAP, epoch)
+            logger.log(logging.INFO, f"EPOCH {epoch} valid loss: {valid_av_loss:.8f} | valid MAP: {valid_MAP:.3f} | train loss: "
+                  f"{train_av_loss:.8f} | train MAP: {train_MAP:.3f}")
             # keep a copy of the best model
             if valid_MAP > best_MAP:
+                # TODO: This would be much better with the state dict
+                # e.g. best_model_state_dict = {k:v.to('cpu') for k, v in model.state_dict().items()}
                 logger.log(logging.INFO, f"New best model in epoch {epoch} with valid MAP score of {valid_MAP}")
                 model = model.to("cpu")
                 best_model = copy.deepcopy(model)
@@ -236,7 +231,7 @@ def fit(params):
                 best_model_epoch = epoch
                 best_MAP = valid_MAP
             # Now implement early stopping
-            if valid_av_losses['loss_total'] > best_valid_loss:
+            if valid_av_loss > best_valid_loss:
                 worse_model_count += 1
                 if not "patience" in params:
                     params["patience"] = params["epochs"]
@@ -244,7 +239,7 @@ def fit(params):
                     logger.log(logging.INFO, f"Stopped training early at epoch {epoch}")
                     break
             else:
-                best_valid_loss = valid_av_losses['loss_total']
+                best_valid_loss = valid_av_loss
                 worse_model_count = 0
         mlflow.log_metric("best_epoch", best_model_epoch)
     except Exception as err:
