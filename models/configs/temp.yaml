@@ -22,3 +22,4 @@
 'max_seq_length': [512]
 'logging_steps': [2]
 'seed': [1337]
+'develop': [True]

@@ -110,14 +110,17 @@ def execute_models(params, use_cache=True):
 
 
 if __name__ == "__main__":
+    config_filename = sys.argv[1]
+    config_file = open(config_filename, 'r')
+    params = yaml.load(config_file)
+    if not "debug" in params:
+        params["debug"] = [False]
     # Set up logging and MLFlow tracking
     # logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
     # logging.basicConfig(stream=sys.stderr, level=logging.ERROR)
     mlflow.set_tracking_uri("http://mlflow.dbs.ifi.lmu.de:5000")
-    config_filename = sys.argv[1]
-    config_file = open(config_filename, 'r')
-    params = yaml.load(config_file)
+
     use_cache = False
     template_dir = base_dir / "models" / "templates"
     make_vanilla_model(template_dir, pretrained=True, trainable_backbone_layers=5)
