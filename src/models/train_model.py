@@ -242,6 +242,7 @@ def fit(params):
                 worse_model_count = 0
         mlflow.log_metric("best_epoch", best_model_epoch)
     except Exception as err:
+        mlflow.log_metric("error", True)
         if params["develop"]:
             # If we're in development we want errors to halt execution (they can be silly errors)
             raise err

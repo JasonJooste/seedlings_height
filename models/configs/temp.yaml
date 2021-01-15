@@ -5,7 +5,7 @@
 #################### MODEL LOCATION ####################
 'model_type': ["RCNN"]
 'model_name': ["RCNN-resnet-50"]
-'base_model_path': ["models/templates/RCNN-resnet-50_5_layer_pretrained_final.pt"]#, "models/templates/RCNN-resnet-50_2_layer.pt","models/templates/RCNN-resnet-50_3_layer.pt","models/templates/RCNN-resnet-50_4_layer.pt","models/templates/RCNN-resnet-50_5_layer.pt"]
+'base_model_path': ["models/templates/RCNN-resnet-50_5_layer_pretrained.pt"]
 'output_dir': ["models/trained"]
 #################### TASK ####################
 'task_name': ["seedlings_temp"]
@@ -13,12 +13,12 @@
 # Could include optimizer hyperparams by making this nested. Maybe different config files for optimiser here?
 #################### TRAINING ####################
 'optimiser': ['ADAM']
-'epochs': [1]
-'valid_ratio': [0.1]
+'epochs': [200]
+'valid_ratio': [0.2]
 'dataloader_num_workers': [5]
-'train_batch_size': [1]
-'eval_batch_size': [1]
-'learning_rate': [1e-6]
+'train_batch_size': [5]
+'eval_batch_size': [5]
+'learning_rate': [1e-8]
 'max_seq_length': [512]
 'logging_steps': [2]
 'seed': [1337]
