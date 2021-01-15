@@ -56,6 +56,8 @@ def get_optimiser(model_params, params):
 # TODO: This could be more complicated later
 def get_device(params):
     # TODO: Kind of a hack to deal with the two machines (my laptop and Rhodos)
+    if "device" in params:
+        return torch.device(params["device"])
     if torch.cuda.device_count() == 2:
         device = torch.device('cuda:1')
     elif torch.cuda.device_count() == 1:
