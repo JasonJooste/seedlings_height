@@ -1,5 +1,6 @@
 import torch
 import torchvision
+from torch.nn.init import xavier_normal_
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor, TwoMLPHead
 from src.models.modifications import RoIHeadsFinalLayer, FasterRCNNEndHeights, RoIHeadsVanilla, FasterRCNNStartHeights, \
     FasterRCNNVanilla
@@ -39,7 +40,8 @@ def make_final_layer_model(model_dir, pretrained=True, trainable_backbone_layers
     # Extend the existing box head with weights for the height layer
     num_new_features = resolution ** 2
     existing_weights = model.roi_heads.box_head.fc6.weight
-    new_weights =torch.randn(representation_size, num_new_features)
+    new_weights =torch.zeros(representation_size, num_new_features)
+    xavier_normal_(new_weights)
     extended_weights = torch.cat((existing_weights, new_weights), 1)
     model.roi_heads.box_head.fc6.weight = nn.Parameter(extended_weights)
     model.roi_heads.box_head.fc6.in_features = extended_weights.shape[1]
@@ -62,7 +64,8 @@ def make_first_layer_model(model_dir, pretrained=True, trainable_backbone_layers
     # Rebuild first conv layer of the backbone to accept one extra layer
     new_shape = list(model.backbone.body.conv1.weight.shape)
     new_shape[1] = 1
-    new_weights = torch.randn(new_shape)
+    new_weights = torch.zeros(new_shape)
+    xavier_normal_(new_weights)
     extended_weights = torch.cat((model.backbone.body.conv1.weight, new_weights), 1)
     model.backbone.body.conv1.weight = nn.Parameter(extended_weights)
     # Now change the transformation to accomodate 4d transformations
