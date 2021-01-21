@@ -16,6 +16,10 @@ import torch.nn.functional as F
 from torchvision.ops import roi_align
 from torchvision.ops.poolers import _onnx_merge_levels, initLevelMapper, LevelMapper, MultiScaleRoIAlign
 
+HEIGHT_MEAN = 0.003977019805461168
+HEIGHT_STD = 0.007557219825685024
+
+
 class RoIHeadsVanilla(RoIHeads):
     """
     The RoIHeads class for integration of height data in the final NN layer
@@ -121,6 +125,8 @@ class RoIHeadsFinalLayer(RoIHeads):
         # First the heights need to be in the correct format.
         heights = [height_im.unsqueeze(0) for height_im in heights]
         heights = torch.cat(heights, 0)
+        #Normalize the heights
+        heights = (heights - HEIGHT_MEAN) / HEIGHT_STD
         heights = {"heights": heights}
         box_heights = self.box_roi_pool(heights, proposals, image_shapes)
         # Now we concatenate the features together
