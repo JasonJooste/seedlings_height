@@ -13,7 +13,9 @@ IMAGE_STD = [0.21669578552246094, 0.22595597803592682, 0.2860477566719055, 0.007
 #
 def make_vanilla_model(model_dir, pretrained=True, trainable_backbone_layers=0):
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=pretrained,
-                                                                 trainable_backbone_layers=trainable_backbone_layers)
+                                                   trainable_backbone_layers=trainable_backbone_layers)
+    # This model has no new weights
+    model.new_weights = nn.ParameterList()
     # Assign model new class to override forward function so it can take height input (and ignore it)
     model.__class__ = FasterRCNNVanilla
     # Replace the model's RoIHead with our version
@@ -40,12 +42,20 @@ def make_final_layer_model(model_dir, pretrained=True, trainable_backbone_layers
     # Extend the existing box head with weights for the height layer
     num_new_features = resolution ** 2
     existing_weights = model.roi_heads.box_head.fc6.weight
-    new_weights =torch.zeros(representation_size, num_new_features)
+    new_weights = torch.zeros(representation_size, num_new_features)
     xavier_normal_(new_weights)
     extended_weights = torch.cat((existing_weights, new_weights), 1)
     model.roi_heads.box_head.fc6.weight = nn.Parameter(extended_weights)
     model.roi_heads.box_head.fc6.in_features = extended_weights.shape[1]
     model.roi_heads.box_roi_pool.featmap_names.append('heights')
+    # Log the new weights that we added so they can be tracked
+    model.existing_weights_shape = existing_weights.shape
+
+    new_weights = torch.narrow(extended_weights, 1, 0, existing_weights.shape[1])
+    # new_weights = torch.narrow(extended_weights, 1, existing_weights.shape[1], new_weights.shape[1])
+
+
+    model.new_weights = nn.ParameterList([nn.Parameter(new_weights)])
     # Assign a new class prediction layer for two classes
     model.roi_heads.box_predictor.cls_score = nn.Linear(representation_size, NUM_CLASSES)
     if pretrained:
@@ -66,8 +76,10 @@ def make_first_layer_model(model_dir, pretrained=True, trainable_backbone_layers
     new_shape[1] = 1
     new_weights = torch.zeros(new_shape)
     xavier_normal_(new_weights)
-    extended_weights = torch.cat((model.backbone.body.conv1.weight, new_weights), 1)
+    existing_weights = model.backbone.body.conv1.weight
+    extended_weights = torch.cat((existing_weights, new_weights), 1)
     model.backbone.body.conv1.weight = nn.Parameter(extended_weights)
+    model.existing_weights_shape = existing_weights.shape
     # Now change the transformation to accomodate 4d transformations
     model.transform.image_mean = IMAGE_MEAN
     model.transform.image_std = IMAGE_STD
