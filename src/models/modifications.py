@@ -234,12 +234,29 @@ class FasterRCNNEndHeights(FasterRCNN):
         else:
             return self.eager_outputs(losses, detections)
 
+    def get_new_weights(self):
+        """
+        Get the new weights from the final model.
+
+        This needs to be done with a function because shared memory pointers are not conserved with pickle
+        :return: The new weights in this model
+        """
+        extended_weights = self.roi_heads.box_head.fc6.weight
+        print(extended_weights.shape)
+        start = self.existing_weights_shape[1]
+        length = extended_weights.shape[1] - self.existing_weights_shape[1]
+        new_weights = torch.narrow(extended_weights, 1, start, length)
+        return nn.ParameterList([nn.Parameter(new_weights)])
+
 class FasterRCNNVanilla(FasterRCNN):
     """
     Wrapper around the standard class that can take the height argument (and ignore it)
     """
     def forward(self, images, heights, targets=None):
         return super().forward(images, targets)
+
+    def get_new_weights(self):
+        return nn.ParameterList()
 
 class FasterRCNNStartHeights(FasterRCNN):
     def forward(self, images, heights, targets=None):
@@ -317,3 +334,15 @@ class FasterRCNNStartHeights(FasterRCNN):
         else:
             return self.eager_outputs(losses, detections)
 
+    def get_new_weights(self):
+        """
+        Get the new weights from the final model.
+
+        This needs to be done with a function because shared memory pointers are not conserved with pickle
+        :return: The new weights in this model
+        """
+        extended_weights = self.backbone.body.conv1.weight
+        start = self.existing_weights_shape[1]
+        length = extended_weights.shape[1] - self.existing_weights_shape[1]
+        new_weights = torch.narrow(extended_weights, 1, start, length)
+        return nn.ParameterList([nn.Parameter(new_weights)])
