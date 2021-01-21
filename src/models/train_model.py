@@ -231,8 +231,8 @@ def fit(params):
             _, valid_MAP = train_one_epoch(model, valid_dataloader, False, params)
             train_MAP = -1
             #### Logging
-            # Log new weights
             metrics = {}
+            # Log new weights
             for param in model.get_new_weights():
                 new_weights = torch.flatten(param)
                 # We only want to take a small sample of the weights
@@ -243,20 +243,20 @@ def fit(params):
                 for i, sample_ind in enumerate(weight_sample):
                     new_weight = new_weights[sample_ind]
                     metrics[f"new_weight_{i}"] = new_weight.item()
-            # Log the rest
+            # Log the loss components
             for loss_name, av_loss in train_av_losses.items():
-                metrics[f"train-{loss_name}"] = av_loss
+                metrics[f"train_{loss_name}"] = av_loss
             for loss_name, av_loss in valid_av_losses.items():
-                metrics[f"valid-{loss_name}"] = av_loss
+                metrics[f"valid_{loss_name}"] = av_loss
 
 
             #TODO: Remove
-            metrics["test-MAP-step"] = test_model(model, params).item()
+            metrics["test_MAP_step"] = test_model(model, params).item()
             
             
             # _, train_MAP = train_one_epoch(model, train_dataloader, False, params)
-            metrics["train-MAP"] = train_MAP
-            metrics["valid-MAP"] = valid_MAP
+            metrics["train_MAP"] = train_MAP
+            metrics["valid_MAP"] = valid_MAP
             mlflow.log_metrics(metrics, epoch)
             logger.log(logging.INFO,
                        f"EPOCH {epoch} valid loss: {valid_av_losses['loss_total']:.8f} | valid MAP: {valid_MAP:.3f} | train loss: "
