@@ -69,7 +69,7 @@ def get_runs_data(df, verbose=True):
     # We don't want to modify the existing dataframe
     new_df = df.copy(deep=True)
     # Change the existing column index to be heirarchical
-    new_df.columns = pd.MultiIndex.from_product([["Params"], new_df.columns])
+    new_df.columns = pd.MultiIndex.from_product([["params"], new_df.columns])
     new_df = pd.concat([new_df, metrics], axis=1)
     return new_df
 
