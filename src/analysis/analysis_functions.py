@@ -5,6 +5,7 @@ from itertools import cycle
 
 import mlflow
 import pandas as pd
+import numpy as np
 import yaml
 
 module_path = pathlib.Path(__file__).parent
@@ -65,7 +66,13 @@ def get_runs_data(df, verbose=True):
             assert math.isnan(run_id), "Should either be a string or NaN"
     if verbose:
         print("Finished reading run info from server")
-    metrics = pd.concat(rows)
+    # We need to keep the order to re-sort later
+    order = np.arange(rows[0].shape[1])
+    order_df = pd.DataFrame([order], index=["order"], columns=rows[0].columns)
+    rows.append(order_df)
+    metrics = pd.concat(rows, sort=False)
+    metrics.sort_values("order", axis=1, inplace=True)
+    metrics.drop("order", axis=0, inplace=True)
     # We don't want to modify the existing dataframe
     new_df = df.copy(deep=True)
     # Change the existing column index to be heirarchical
