@@ -108,7 +108,6 @@ def repair_mixed_metrics(df):
     """
     new_df = df.copy()
     existing_cols = df.columns.unique(level=1)
-    print(df.columns.unique(level=0))
     cols = []
     # TODO: Do the reassignment based on the top level index rather than the bottom level
     for tup in df.columns:
