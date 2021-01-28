@@ -96,7 +96,6 @@ def execute_models(params, use_cache=True):
             mlflow.log_param(param, val)
         # Fit model
         model, best_model_epoch, test_MAP = fit(this_config)
-        mlflow.end_run()
         # Save the model file
         filename.with_suffix(".pt")
         torch.save(model, filename.with_suffix(".pt"))
@@ -125,7 +124,6 @@ if __name__ == "__main__":
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
     # logging.basicConfig(stream=sys.stderr, level=logging.ERROR)
     mlflow.set_tracking_uri("http://mlflow.dbs.ifi.lmu.de:5000")
-
     use_cache = False
     template_dir = base_dir / "models" / "templates"
     make_vanilla_model(template_dir, pretrained=True, trainable_backbone_layers=5)

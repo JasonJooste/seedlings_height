@@ -10,6 +10,9 @@ import yaml
 module_path = pathlib.Path(__file__).parent
 base_dir = module_path.parent.parent.absolute()
 logger = logging.getLogger(__name__)
+# Not a wonderful solution. This makes sure that the server is always set
+mlflow.set_tracking_uri("http://mlflow.dbs.ifi.lmu.de:5000")
+
 
 
 def get_dataframe(directory, taskname=None):
