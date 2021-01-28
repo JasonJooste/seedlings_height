@@ -41,7 +41,8 @@ def get_dataframe(directory, taskname=None):
 
 def get_runs_data(df):
     """
-    Take a dataframe of our run logs and access any mlflow data that was stored for these runs
+    Take a dataframe of our run logs, access any mlflow data that was stored for these runs and return a dataframe
+    augmented with the metrics
     :param df:
     :return: df
     """
