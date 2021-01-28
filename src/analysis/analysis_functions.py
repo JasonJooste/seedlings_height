@@ -67,12 +67,7 @@ def get_runs_data(df, verbose=True):
     if verbose:
         print("Finished reading run info from server")
     # We need to keep the order to re-sort later
-    order = np.arange(rows[0].shape[1])
-    order_df = pd.DataFrame([order], index=["order"], columns=rows[0].columns)
-    rows.append(order_df)
     metrics = pd.concat(rows, sort=False)
-    metrics.sort_values("order", axis=1, inplace=True)
-    metrics.drop("order", axis=0, inplace=True)
     # We don't want to modify the existing dataframe
     new_df = df.copy(deep=True)
     # Change the existing column index to be heirarchical
@@ -97,8 +92,8 @@ def get_run_metric_data(run_id: str) -> pd.DataFrame:
     indexes = []
     for metric in metrics:
         metric_hist = client.get_metric_history(run_id, metric)
-        metric_names = [f"{metric}_{ind}" for ind in range(len(metric_hist))]
-        index_tuples = zip(cycle([metric]), metric_names)
+        # metric_names = [f"{metric}_{ind}" for ind in range(len(metric_hist))]
+        index_tuples = zip(cycle([metric]), range(len(metric_hist)))
         values.extend([m.value for m in metric_hist])
         indexes.extend(index_tuples)
     index = pd.MultiIndex.from_tuples(indexes, names=["metric", "metric_dp"])
@@ -113,14 +108,16 @@ def repair_mixed_metrics(df):
     """
     new_df = df.copy()
     existing_cols = df.columns.unique(level=1)
+    print(df.columns.unique(level=0))
     cols = []
-    #TODO, could keep track of boolean mask to data and locations and do the transfer once. It's currently quite slow
+    # TODO: Do the reassignment based on the top level index rather than the bottom level
     for tup in df.columns:
         # Will have to do some stuff for the multiindex here
         top = tup[0]
         col = tup[1]
-        if "-" in col:
-            new_col = col.replace("-", "_")
+        if "-" in top:
+            # new_col = col.replace("-", "_")
+            new_col = col
             new_top = top.replace("-", "_")
             # Check that there is only one existing value
             inds = [i for i,e in enumerate(existing_cols) if e == new_col]
