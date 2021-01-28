@@ -98,3 +98,32 @@ def get_run_metric_data(run_id: str) -> pd.DataFrame:
     # Needs a list around the values to make this a row instead of a column
     run_df = pd.DataFrame([values], columns=index)
     return run_df
+
+def repair_mixed_metrics(df):
+    """Unify all metrics with dashes and underscores
+
+    Some metrics were renamed with underscores instead of dashes. This unifies these columns in the df
+    """
+    new_df = df.copy()
+    existing_cols = df.columns.unique(level=1)
+    cols = []
+    #TODO, could keep track of boolean mask to data and locations and do the transfer once. It's currently quite slow
+    for tup in df.columns:
+        # Will have to do some stuff for the multiindex here
+        top = tup[0]
+        col = tup[1]
+        if "-" in col:
+            new_col = col.replace("-", "_")
+            new_top = top.replace("-", "_")
+            # Check that there is only one existing value
+            inds = [i for i,e in enumerate(existing_cols) if e == new_col]
+            assert inds or len(inds) == 1, "There should be 0 or 1 match for every column with a -"
+            # Now we transfer the existing data to the new column (while checking that the overlap doesn't overwrite anything)
+            matches = df[(top, col)].isna()
+            new_matches = df[(new_top, new_col)].isna()
+            assert not (~matches & ~new_matches).any(), "You can't have real values in both columns"
+            new_df.loc[new_matches, (new_top, new_col)] = df.loc[new_matches, (top, col)]
+            cols.append((top, col))
+    # Drop all of the columns
+    new_df = new_df.drop(cols, axis=1)
+    return new_df
