@@ -1,6 +1,7 @@
 """
 A file containing modifications to some functions of the torchvision packages
 """
+import logging
 from collections import OrderedDict
 
 import warnings
@@ -19,6 +20,7 @@ from torchvision.ops.poolers import _onnx_merge_levels, initLevelMapper, LevelMa
 HEIGHT_MEAN = 0.003977019805461168
 HEIGHT_STD = 0.007557219825685024
 
+logger = logging.getLogger(__name__)
 
 class RoIHeadsVanilla(RoIHeads):
     """
@@ -73,6 +75,7 @@ class RoIHeadsVanilla(RoIHeads):
                 "loss_box_reg": loss_box_reg
             }
         # else:
+        # logger.log(logging.INFO, box_regression)
         boxes, scores, labels = self.postprocess_detections(class_logits, box_regression, proposals, image_shapes)
         num_images = len(boxes)
         for i in range(num_images):
@@ -242,7 +245,6 @@ class FasterRCNNEndHeights(FasterRCNN):
         :return: The new weights in this model
         """
         extended_weights = self.roi_heads.box_head.fc6.weight
-        print(extended_weights.shape)
         start = self.existing_weights_shape[1]
         length = extended_weights.shape[1] - self.existing_weights_shape[1]
         new_weights = torch.narrow(extended_weights, 1, start, length)
