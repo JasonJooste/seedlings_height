@@ -13,8 +13,6 @@ logger = logging.getLogger(__name__)
 # Not a wonderful solution. This makes sure that the server is always set
 mlflow.set_tracking_uri("http://mlflow.dbs.ifi.lmu.de:5000")
 
-
-
 def get_dataframe(directory, taskname=None):
     """
     Read in all of the config files of trained models and organise them as a pandas dataframe
@@ -42,7 +40,7 @@ def get_dataframe(directory, taskname=None):
     return df
 
 
-def get_runs_data(df):
+def get_runs_data(df, verbose=True):
     """
     Take a dataframe of our run logs, access any mlflow data that was stored for these runs and return a dataframe
     augmented with the metrics
@@ -51,7 +49,12 @@ def get_runs_data(df):
     """
     run_ids = df["run_id"]
     rows = []
-    for ind in run_ids.index:
+    if verbose:
+        #TODO: Using print statemetns here because logging doesn't work nicely with notebooks. This could be fixed
+        print("Reading run info from server")
+    for i, ind in enumerate(run_ids.index):
+        if verbose and not i % 10:
+            print(f"Run {i} of {len(run_ids)} ({i/len(run_ids) * 100:.2f}%)")
         run_id = run_ids[ind]
         if type(run_id) is str:
             metric_data = get_run_metric_data(run_id)
@@ -60,6 +63,8 @@ def get_runs_data(df):
             rows.append(metric_data)
         else:
             assert math.isnan(run_id), "Should either be a string or NaN"
+    if verbose:
+        print("Finished reading run info from server")
     metrics = pd.concat(rows)
     # We don't want to modify the existing dataframe
     new_df = df.copy(deep=True)
