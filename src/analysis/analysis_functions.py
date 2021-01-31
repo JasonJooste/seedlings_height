@@ -130,3 +130,23 @@ def repair_mixed_metrics(df):
     # Drop all of the columns
     new_df = new_df.drop(cols, axis=1)
     return new_df
+
+def multiindex_transpose(df):
+    """
+    Transpose the dataframe while keeping the same high level multiindex group
+
+    # TODO: Include example here
+    # TODO: This might be related to pivot function??
+    # https://stackoverflow.com/questions/35414625/pandas-how-to-run-a-pivot-with-a-multi-index
+    """
+    dfs = []
+    cols = df.columns.unique(level=0)
+    for col in cols:
+        trans = df[col].transpose()
+        # Now we make a new multiindex
+        new_index = pd.MultiIndex.from_product([[col], trans.columns])
+        trans.columns = new_index
+        trans = trans.reset_index(drop=True)
+        dfs.append(trans)
+    transposed = pd.concat(dfs, axis=1)
+    return transposed
