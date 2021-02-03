@@ -29,7 +29,11 @@ logger = logging.getLogger(__name__)
 
 def get_dataloader(params):
     # First split into train and validation
-    train_file_path = base_dir.joinpath(params["train_file"])
+    if "data_file" in params:
+        train_file = params["data_file"]["train_file"]
+    else:
+        train_file = params["train_file"]
+    train_file_path = base_dir.joinpath(train_file)
     all_train = pd.read_csv(train_file_path)
     train, valid = train_test_split(all_train, test_size=params["valid_ratio"])
     train_dataset = SeedlingDataset(train)
@@ -144,10 +148,6 @@ def train_one_epoch(model, dataloader, opt, params):
     batch_num = 0
     # Just a placeholder
     img_size = (256, 256)
-
-
-
-    set = True
     for batch_images, batch_heights, batch_targets, _ in dataloader:
         batch_size = len(batch_images)
         img_size = batch_images[0].shape
@@ -194,7 +194,11 @@ def train_one_epoch(model, dataloader, opt, params):
     return named_losses, MAP
 
 def test_model(model, params):
-    test_file_path = base_dir.joinpath(params["test_file"])
+    if "data_file" in params:
+        test_file = params["data_file"]["test_file"]
+    else:
+        test_file = params["test_file"]
+    test_file_path = base_dir.joinpath(test_file)
     test_data = pd.read_csv(test_file_path)
     test_dataset = SeedlingDataset(test_data)
     test_dataloader = DataLoader(
