@@ -47,6 +47,7 @@ shared_ids["label_filename"] = f"{str(label_dir)}/" + shared_ids['label_filename
 shared_ids["im_filename"] = f"{str(im_dir)}/" + shared_ids['im_filename'] + ".tif"
 shared_ids["height_filename"] = f"{str(im_dir)}/" + shared_ids['height_filename'] + ".tif"
 # Split into train test
-train, test = train_test_split(shared_ids, test_size=TEST_SIZE)
-train.to_csv(DIR_INPUT / "site_464_201710_30_train.csv")
-test.to_csv(DIR_INPUT / "site_464_201710_30_test.csv")
+for i in range(5):
+    train, test = train_test_split(shared_ids, test_size=TEST_SIZE, random_state=i)
+    train.to_csv(DIR_INPUT / f"site_464_201710_30_train_{i}.csv")
+    test.to_csv(DIR_INPUT / f"site_464_201710_30_test_{i}.csv")
