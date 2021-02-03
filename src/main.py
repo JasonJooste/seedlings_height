@@ -104,7 +104,7 @@ def execute_models(params, use_cache=True):
         this_config["best_model_epoch"] = best_model_epoch
         this_config["test_MAP"] = test_MAP
         this_config["run_id"] = this_run.info.run_id
-        this_config["experiment_id"] = this_run.info.run_id
+        this_config["experiment_id"] = this_run.info.experiment_id
         file = open(filename.with_suffix(".yaml"), 'w')
         yaml.dump(this_config, file)
         mlflow.end_run()
