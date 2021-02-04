@@ -74,7 +74,7 @@ def get_runs_data(df, verbose=True):
     # We don't want to modify the existing dataframe
     new_df = df.copy(deep=True)
     # Change the existing column index to be heirarchical
-    new_df.columns = pd.MultiIndex.from_product([["params"], new_df.columns])
+    new_df.columns = pd.MultiIndex.from_product([["params"], new_df.columns], names=("metric", "point"))
     new_df = pd.concat([new_df, metrics], axis=1)
     return new_df
 
@@ -160,6 +160,26 @@ def multiindex_transpose(df):
         dfs.append(trans)
     transposed = pd.concat(dfs, axis=1)
     return transposed
+
+def filter_df(df, param_cols, metric_cols):
+    """Get the dataframe with only these parameters and metrics.
+
+    There doesn't seem to be any elegant way to select from multiple levels of the multiindex in pandas.
+    This is a helper function to make this more seamless."""
+    lvl_0 = df.columns.get_level_values(level=0)
+    lvl_1 = df.columns.get_level_values(level=1)
+    # There must be a nicer way of doing this
+    cond_0 = lvl_0.isin(metric_cols)
+    cond_1 = lvl_1.isin(param_cols)
+    new_df = df.loc[:, cond_0 | cond_1].copy()
+    # Assumes that params come first in the ordering followed by metrics
+    # TODO: You could check this assumption by doing cond for matches again
+    try:
+        new_df.columns = param_cols + metric_cols
+    except ValueError:
+        raise Exception("Make sure param_cols and metric_cols are ALL valid")
+    return new_df
+
 
 # def display_boxes(image_file, true_boxes, ann_boxes):
 #     image = cv2.imread(image_file)
