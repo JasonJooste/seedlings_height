@@ -7,12 +7,15 @@ import mlflow
 import pandas as pd
 import numpy as np
 import yaml
+import cv2
+import matplotlib.pyplot as plt
 
 module_path = pathlib.Path(__file__).parent
 base_dir = module_path.parent.parent.absolute()
 logger = logging.getLogger(__name__)
 # Not a wonderful solution. This makes sure that the server is always set
 mlflow.set_tracking_uri("http://mlflow.dbs.ifi.lmu.de:5000")
+
 
 def get_dataframe(directory, taskname=None):
     """
@@ -108,6 +111,7 @@ def repair_mixed_metrics(df):
     """
     new_df = df.copy()
     existing_cols = df.columns.unique(level=1)
+    existing_tops = df.columns.unique(level=0)
     cols = []
     # TODO: Do the reassignment based on the top level index rather than the bottom level
     for tup in df.columns:
@@ -118,6 +122,12 @@ def repair_mixed_metrics(df):
             # new_col = col.replace("-", "_")
             new_col = col
             new_top = top.replace("-", "_")
+            # Check if there is a new top level term (sometimes it hasn't been replaced)
+            inds = [i for i, e in enumerate(existing_tops) if e == new_top]
+            if not inds:
+                # If the new term doesn't exist we can just rename and skip
+                new_df.rename({top: new_top}, inplace=True, axis=1)
+                continue
             # Check that there is only one existing value
             inds = [i for i,e in enumerate(existing_cols) if e == new_col]
             assert inds or len(inds) == 1, "There should be 0 or 1 match for every column with a -"
@@ -150,3 +160,11 @@ def multiindex_transpose(df):
         dfs.append(trans)
     transposed = pd.concat(dfs, axis=1)
     return transposed
+
+# def display_boxes(image_file, true_boxes, ann_boxes):
+#     image = cv2.imread(image_file)
+#     for true_box in true_boxes:
+#         x1, x2, y1, y2 = true_box
+#         cv2.rectangle(image, (int(x1), int(y1)), ((int(x2), int(y2)), (255, 0, 0), 1)
+#     cv2.imshow(' ', image)
+#     plt.show()
