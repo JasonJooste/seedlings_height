@@ -304,7 +304,7 @@ def fit(params):
         else:
             # During deployment we want the model testing to be robust to unexpected errors
             logger.exception(err)
-    mlflow.log_metric("best-epoch", best_model_epoch)
+    mlflow.log_metric("best_epoch", best_model_epoch)
     # Test the final model on the test set
     if best_model:
         test_MAP = test_model(best_model, params).item()
