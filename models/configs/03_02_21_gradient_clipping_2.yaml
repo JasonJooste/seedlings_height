@@ -8,7 +8,7 @@
 'base_model_path': ["models/templates/RCNN-resnet-50_5_layer_pretrained.pt"]
 'output_dir': ["models/trained"]
 #################### TASK ####################
-'task_name': ["seedlings_clipping_2"]
+'task_name': ["seedlings_clipping_3"]
 'task_description': ["Quick test for different gradient clipping values on the progress over the first few epochs"]
 # Could include optimizer hyperparams by making this nested. Maybe different config files for optimiser here?
 #################### TRAINING ####################
@@ -27,5 +27,5 @@
 'seed': [1337, 42]
 'num_weights_tracked': [10]
 'device': ["cuda:1"]
-'develop': [True]
+'develop': [False]
 'clip': [5, 1, 0.5, 0.1, 0.025]
