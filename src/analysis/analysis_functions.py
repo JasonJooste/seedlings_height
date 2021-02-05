@@ -24,6 +24,10 @@ def get_dataframe(directory, taskname=None):
     :param directory: The directory of the trained models
     :return:
     """
+    # if the taskname is not a list then put it in a list
+    #TODO: proper duck typing would be better here
+    if isinstance(taskname, str):
+        taskname = [taskname]
     # Convert to pathlib path
     directory = pathlib.Path(directory)
     if not directory.exists():
@@ -35,7 +39,7 @@ def get_dataframe(directory, taskname=None):
         with config_file.open(mode='r') as f:
             config_dict = yaml.safe_load(f)
             # Check that the name matches the desired task name
-            if not taskname or config_dict["task_name"] == taskname:
+            if not taskname or config_dict["task_name"] in taskname:
                 configs.append(config_dict)
     if not configs:
         return None
