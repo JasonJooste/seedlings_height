@@ -7,6 +7,8 @@ import pandas as pd
 import src.util.util as utils
 import xml.etree.ElementTree as ET
 import albumentations as A
+import numpy as np
+
 
 COLOUR_MAX = 255.0
 HEIGHT_MAX = 255.0
@@ -87,10 +89,12 @@ class SeedlingDataset(Dataset):
             id_entries.append(this_id)
             truncateds.append(box_elem.find("truncated").text == "1")
             box = box_elem.find("bndbox")
-            xmins.append(int(box.find("xmin").text))
-            xmaxs.append(int(box.find("xmax").text))
-            ymins.append(int(box.find("ymin").text))
-            ymaxs.append(int(box.find("ymax").text))
+            names = ["xmin", "xmax", "ymin", "ymax"]
+            vals = np.array([box.find(name).text for name in names]).astype(np.float)
+            xmins.append(vals[0])
+            xmaxs.append(vals[1])
+            ymins.append(vals[2])
+            ymaxs.append(vals[3])
         # Create the final dataframe
         df = pd.DataFrame(zip(id_entries, xmins, xmaxs, ymins, ymaxs, truncateds),
                       columns=["id", "xmin", "xmax", "ymin", "ymax", "truncated"])
