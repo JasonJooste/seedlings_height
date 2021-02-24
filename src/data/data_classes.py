@@ -43,8 +43,6 @@ class SeedlingDataset(Dataset):
         image = cv2.imread(img_path, cv2.IMREAD_COLOR)
         height_path = paths.iloc[0, 1]
         height_image = cv2.imread(height_path, cv2.IMREAD_UNCHANGED)
-        # Check that the images were stored in the correct format
-        print("running")
         # Check that both images are in 8 bit format (as much as possible)
         if max(image.flatten()) > 256:
             raise RuntimeError(f"{img_path} is not in 8 bit format")
