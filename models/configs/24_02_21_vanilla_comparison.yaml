@@ -1,15 +1,15 @@
 # Is it possible to have hierarchical config files? XML? Hydra?
 #################### DATA LOCATION ####################
-'train_file': ['data/460-464-466_201710_30_train_0.csv', 'data/site_464_201710_30_train_0.csv']
-'test_file': ['data/460-464-466_201710_30_test_0.csv', "data/site_464_201710_30_test_0.csv"]
+'train_file': ['data/460-464-466_201710_30_train_0.csv', 'data/train_0.csv']
+'test_file': ['data/460-464-466_201710_30_test_0.csv', "test_0.csv"]
 #################### MODEL LOCATION ####################
 'model_type': ["RCNN"]
 'model_name': ["RCNN-resnet-50"]
 'base_model_path': ["models/templates/RCNN-resnet-50_5_layer_pretrained.pt"]
 'output_dir': ["models/trained"]
 #################### TASK ####################
-'task_name': ["seedlings_extra_data_vanilla"]
-'task_description': ["A test to see how the network performs with the extra data. With new data as test set as well as old data - this will show us if the new test data is more or less difficult"]
+'task_name': ["seedlings_extra_data_vanilla_2"]
+'task_description': ["A test to see how the network performs with the extra data. With new data as test set as well as old data. This time we draw the 464 samples from the combined split - that way there is no leakage"]
 # Could include optimizer hyperparams by making this nested. Maybe different config files for optimiser here?
 #################### TRAINING ####################
 'optimiser': ['SGD']
