@@ -97,8 +97,9 @@ def execute_models(params, use_cache=True):
         # Fit model
         model, best_model_epoch, test_MAP = fit(this_config)
         # Save the model file
-        filename.with_suffix(".pt")
-        torch.save(model, filename.with_suffix(".pt"))
+        if not params["develop"]:
+            filename.with_suffix(".pt")
+            torch.save(model, filename.with_suffix(".pt"))
         # Save the config file
         this_config["trained_model_path"] = str(filename.with_suffix(".pt"))
         this_config["best_model_epoch"] = best_model_epoch
