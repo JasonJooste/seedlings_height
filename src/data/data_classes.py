@@ -41,6 +41,15 @@ class SeedlingDataset(Dataset):
         assert len(paths) == 1, "There should only be one match"
         img_path = paths.iloc[0, 0]
         image = cv2.imread(img_path, cv2.IMREAD_COLOR)
+        height_path = paths.iloc[0, 1]
+        height_image = cv2.imread(height_path, cv2.IMREAD_UNCHANGED)
+        # Check that the images were stored in the correct format
+        print("running")
+        # Check that both images are in 8 bit format (as much as possible)
+        if max(image.flatten()) > 256:
+            raise RuntimeError(f"{img_path} is not in 8 bit format")
+        if max(height_image.flatten()) > 256:
+            raise RuntimeError(f"{height_path} is not in 8 bit format")
         assert image is not None, "The image should exist"
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         # Scale to 0-1 space
@@ -49,8 +58,6 @@ class SeedlingDataset(Dataset):
         # Rearrange image - pytorch standard models expect channel dimension first
         image = image.permute((2, 0, 1))
         # Read in the height map
-        height_path = paths.iloc[0, 1]
-        height_image = cv2.imread(height_path, cv2.IMREAD_UNCHANGED)
         height_image = height_image / HEIGHT_MAX
         height_image = torch.tensor(height_image, dtype=torch.float)
         height_image = height_image.unsqueeze(0)
