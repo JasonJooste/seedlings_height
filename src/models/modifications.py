@@ -91,7 +91,7 @@ class RoIHeadsVanilla(RoIHeads):
         assert self.keypoint_roi_pool is None, "This functionality is not supported"
         return result, losses
 
-class RoIHeadsFinalLayer(RoIHeads):
+class RoIHeadsEndHeights(RoIHeads):
     def forward(self,
                 features,      # type: Dict[str, Tensor]
                 heights,       # type: [Tensor]
