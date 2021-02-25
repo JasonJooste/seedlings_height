@@ -128,15 +128,20 @@ if __name__ == "__main__":
     use_cache = False
     template_dir = base_dir / "models" / "templates"
 
-    # TODO: Return these models
+    # Build the models
     make_vanilla_model(template_dir, pretrained=True, trainable_backbone_layers=5)
     make_final_layer_model(template_dir, pretrained=True, trainable_backbone_layers=5)
     make_first_layer_model(template_dir, pretrained=True, trainable_backbone_layers=5)
     make_normal_backbone_model(template_dir, pretrained=True, trainable_backbone_layers=5)
-    for pretrained in [True, False]:
-        for i in range(6):
-            template_dir = base_dir / "models" / "templates"
-            make_vanilla_model(template_dir, pretrained=pretrained, trainable_backbone_layers=i)
+    make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=True, pooling_layer=True, out_channels=256)
+    make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=True, pooling_layer=False, out_channels=256)
+    make_pre_roi_model(template_dir, [4], pretrained=True, pooling_layer=True, out_channels=256)
+    make_pre_roi_model(template_dir, [4], pretrained=True, pooling_layer=False, out_channels=256)
+    make_pre_roi_model(template_dir, [4], pretrained=True, pooling_layer=False, out_channels=64)
+    # for pretrained in [True, False]:
+    #     for i in range(6):
+    #         template_dir = base_dir / "models" / "templates"
+    #         make_vanilla_model(template_dir, pretrained=pretrained, trainable_backbone_layers=i)
     execute_models(params, use_cache)
 
 

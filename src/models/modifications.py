@@ -8,6 +8,7 @@ import warnings
 from typing import Union
 
 import torchvision
+from torch.nn import AdaptiveAvgPool2d
 from torchvision.models.detection import FasterRCNN
 from torchvision.models.detection.roi_heads import fastrcnn_loss, RoIHeads
 import torch
@@ -16,6 +17,7 @@ from torch.jit.annotations import Optional, List, Dict, Tuple
 import torch.nn.functional as F
 from torchvision.ops import roi_align
 from torchvision.ops.poolers import _onnx_merge_levels, initLevelMapper, LevelMapper, MultiScaleRoIAlign
+
 
 HEIGHT_MEAN = 0.003977019805461168
 HEIGHT_STD = 0.007557219825685024
@@ -348,3 +350,99 @@ class FasterRCNNStartHeights(FasterRCNN):
         length = extended_weights.shape[1] - self.existing_weights_shape[1]
         new_weights = torch.narrow(extended_weights, 1, start, length)
         return nn.ParameterList([nn.Parameter(new_weights)])
+
+class FasterRCNNPreRpn(FasterRCNN):
+    def forward(self, images, heights, targets=None):
+        # type: (List[Tensor], Optional[List[Dict[str, Tensor]]]) -> Tuple[Dict[str, Tensor], List[Dict[str, Tensor]]]
+        """
+        Arguments:
+            images (list[Tensor]): images to be processed
+            targets (list[Dict[Tensor]]): ground-truth boxes present in the image (optional)
+
+        Returns:
+            result (list[BoxList] or dict[Tensor]): the output from the model.
+                During training, it returns a dict[Tensor] which contains the losses.
+                During testing, it returns list[BoxList] contains additional fields
+                like `scores`, `labels` and `mask` (for Mask R-CNN models).
+
+        """
+        if self.training and targets is None:
+            raise ValueError("In training mode, targets should be passed")
+        if self.training:
+            assert targets is not None
+            for target in targets:
+                boxes = target["boxes"]
+                if isinstance(boxes, torch.Tensor):
+                    if len(boxes.shape) != 2 or boxes.shape[-1] != 4:
+                        raise ValueError("Expected target boxes to be a tensor"
+                                         "of shape [N, 4], got {:}.".format(
+                                             boxes.shape))
+                else:
+                    raise ValueError("Expected target boxes to be of type "
+                                     "Tensor, got {:}.".format(type(boxes)))
+
+        original_image_sizes = torch.jit.annotate(List[Tuple[int, int]], [])
+        for img in images:
+            val = img.shape[-2:]
+            assert len(val) == 2
+            original_image_sizes.append((val[0], val[1]))
+
+        images, targets = self.transform(images, targets)
+
+        # Check for degenerate boxes
+        # TODO: Move this to a function
+        if targets is not None:
+            for target_idx, target in enumerate(targets):
+                boxes = target["boxes"]
+                degenerate_boxes = boxes[:, 2:] <= boxes[:, :2]
+                if degenerate_boxes.any():
+                    # print the first degenerate box
+                    bb_idx = torch.where(degenerate_boxes.any(dim=1))[0][0]
+                    degen_bb: List[float] = boxes[bb_idx].tolist()
+                    raise ValueError("All bounding boxes should have positive height and width."
+                                     " Found invalid box {} for target at index {}."
+                                     .format(degen_bb, target_idx))
+
+        features = self.backbone(images.tensors)
+        if isinstance(features, torch.Tensor):
+            features = OrderedDict([('0', features)])
+        # Add the heights to the features here
+        features = self.add_heights(heights, features)
+        proposals, proposal_losses = self.rpn(images, features, targets)
+        # This is the only difference to the forward function - we feed the heights parameter in here
+        detections, detector_losses = self.roi_heads(features, proposals, images.image_sizes, targets)
+        detections = self.transform.postprocess(detections, images.image_sizes, original_image_sizes)
+        losses = {}
+        losses.update(detector_losses)
+        losses.update(proposal_losses)
+        if torch.jit.is_scripting():
+            if not self._has_warned:
+                warnings.warn("RCNN always returns a (Losses, Detections) tuple in scripting")
+                self._has_warned = True
+            return (losses, detections)
+        else:
+            return self.eager_outputs(losses, detections)
+
+    def add_heights(self, heights, features):
+        # Put heights in the correct format
+        heights = [height_im.unsqueeze(0) for height_im in heights]
+        heights = torch.cat(heights, 0)
+        new_features = OrderedDict()
+        for key, feature in features.items():
+            feature_size = feature.shape[2:]
+            # Resize the heights image to this new shape
+            avg_pool = AdaptiveAvgPool2d(feature_size)
+            new_heights = avg_pool(heights)
+            # Now concatenate the heights
+            new_feature = torch.cat((feature, new_heights), dim=1)
+            new_features[key] = new_feature
+        return new_features
+
+    def get_new_weights(self):
+        """
+        Get the new weights from the final model.
+
+        This needs to be done with a function because shared memory pointers are not conserved with pickle
+        :return: The new weights in this model
+        """
+        return [torch.zeros(20)]
