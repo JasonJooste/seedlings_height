@@ -246,6 +246,7 @@ def fit(params):
             train_MAP = -1
             #### Logging
             metrics = {}
+            # TODO This is flawed. The metric is overwritten each time
             # Log new weights
             for param in model.get_new_weights():
                 new_weights = torch.flatten(param)
