@@ -1,7 +1,7 @@
 # Is it possible to have hierarchical config files? XML? Hydra?
 #################### DATA LOCATION ####################
 'train_file': ['data/460-464-466_201710_30_train_0.csv', 'data/train_0.csv']
-'test_file': ['data/460-464-466_201710_30_test_0.csv', "test_0.csv"]
+'test_file': ['data/460-464-466_201710_30_test_0.csv', "data/test_0.csv"]
 #################### MODEL LOCATION ####################
 'model_type': ["RCNN"]
 'model_name': ["RCNN-resnet-50"]
