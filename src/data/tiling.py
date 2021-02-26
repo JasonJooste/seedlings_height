@@ -233,15 +233,15 @@ def process_images(image_path, big_height_path, slice_h=256, slice_w=256):
 
 #############################################################################################################
 # Run for our lanes
-# gdal.UseExceptions()
-# raw_dir = base_dir / "data" / "raw" / "images"
-# lane_files = ["site_460_201710_030m_ortho_als11.tif",
-#               "site_464_201710_030m_ortho_als11.tif",
-#               "site_466_201710_030m_ortho_als11.tif"]
-# height_path = base_dir.joinpath("data/raw/images/KirbyLeafOff2017DSMEntireSite.tif").resolve()
-# for lane_file in lane_files:
-#     im_path = raw_dir / lane_file
-#     process_images(im_path, height_path)
+gdal.UseExceptions()
+raw_dir = base_dir / "data" / "raw" / "images"
+lane_files = ["site_460_201710_030m_ortho_als11.tif",
+              "site_464_201710_030m_ortho_als11.tif",
+              "site_466_201710_030m_ortho_als11.tif"]
+height_path = base_dir.joinpath("data/raw/images/KirbyLeafOff2017DSMEntireSite.tif").resolve()
+for lane_file in lane_files:
+    im_path = raw_dir / lane_file
+    process_images(im_path, height_path)
 
 
 
