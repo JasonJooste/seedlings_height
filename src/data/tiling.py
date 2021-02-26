@@ -2,6 +2,7 @@ import math
 import pathlib
 import gdal
 import matplotlib
+import os
 import skimage as skim
 import skimage.transform
 import skimage.io
@@ -218,9 +219,14 @@ def process_images(image_path, big_height_path, slice_h=256, slice_w=256):
     # xml files)
     im_new_path = remove_pad_tl(new_image_path, 35)
     new_height_path = remove_pad_tl(new_height_path, 35)
+    final_dir = base_dir / "data" / "processed"
+    # clear all previous files
+    prev_files = final_dir.glob("*_cut-*.tif")
+    for f in prev_files:
+        os.remove(f)
     # Split the images
-    im_final_path = base_dir / "data" / "processed" / im_new_path.name
-    h_final_path = base_dir / "data" / "processed" / new_height_path.name
+    im_final_path = final_dir / im_new_path.name
+    h_final_path = final_dir / new_height_path.name
     split_images(im_new_path, im_final_path, slice_w, slice_h)
     split_images(new_height_path, h_final_path, slice_w, slice_h)
 
