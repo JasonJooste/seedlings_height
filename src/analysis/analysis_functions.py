@@ -182,7 +182,32 @@ def filter_df(df, param_cols, metric_cols):
         new_df.columns = param_cols + metric_cols
     except ValueError:
         raise Exception("Make sure param_cols and metric_cols are ALL valid")
+    # Make sure it is in dataframe format and not series format
+    new_df = pd.DataFrame(new_df)
     return new_df
+
+def boxplot(df, all_params, params, metrics, col_names=None):
+    red_df = filter_df(df, all_params, metrics)
+    anal_df = red_df.set_index(all_params).unstack(params)
+    anal_df.columns = col_names
+    plt.boxplot(anal_df.values.flatten())
+    ax = plt.gca()
+    ax.set_title("All results")
+    plt.show()
+    anal_df.boxplot()
+    ax = plt.gca()
+    ax.set_title("Results for different models runs")
+    plt.show()
+
+def clean_names(df):
+    # Make the df a little easier to read
+    df[("params", "data_file")] = df[("params", "data_file")].map(str)
+    cv_nums = df[("params", "data_file")].str.extractall(r"train_(\d+).csv")
+    split_model_names = df[("params", "base_model_path")].str.split("resnet-50_")
+    red_df = df.copy()
+    red_df[("params", "data_file")] = cv_nums[0].to_numpy()
+    red_df[("params", "base_model_path")] = [names_list[1] for names_list in split_model_names]
+    return red_df
 
 
 # def display_boxes(image_file, true_boxes, ann_boxes):

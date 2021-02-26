@@ -135,6 +135,7 @@ if __name__ == "__main__":
     make_first_layer_model(template_dir, pretrained=False, trainable_backbone_layers=5)
     make_normal_backbone_model(template_dir, pretrained=True, trainable_backbone_layers=5)
     make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=True, pooling_layer=True, out_channels=256)
+    make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=True, pooling_layer=True, out_channels=64)
     make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=True, pooling_layer=False, out_channels=256)
     make_pre_roi_model(template_dir, [4], pretrained=True, pooling_layer=True, out_channels=256)
     make_pre_roi_model(template_dir, [4], pretrained=True, pooling_layer=False, out_channels=256)
