@@ -97,7 +97,7 @@ def execute_models(params, use_cache=True):
         # Fit model
         model, best_model_epoch, test_MAP = fit(this_config)
         # Save the model file
-        if not params["develop"]:
+        if not this_config["develop"]:
             filename.with_suffix(".pt")
             torch.save(model, filename.with_suffix(".pt"))
         # Save the config file
@@ -140,6 +140,7 @@ if __name__ == "__main__":
     make_pre_roi_model(template_dir, [4], pretrained=True, pooling_layer=True, out_channels=256)
     make_pre_roi_model(template_dir, [4], pretrained=True, pooling_layer=False, out_channels=256)
     make_pre_roi_model(template_dir, [4], pretrained=True, pooling_layer=False, out_channels=64)
+    make_trained_backbone_model(template_dir)
     # for pretrained in [True, False]:
     #     for i in range(6):
     #         template_dir = base_dir / "models" / "templates"
