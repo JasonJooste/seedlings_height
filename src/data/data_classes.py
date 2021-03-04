@@ -78,8 +78,10 @@ class SeedlingDataset(Dataset):
         df = pd.concat(file_boxes)
         return df
 
-    # site_464_201710_030m_ortho_als11_3channels_cut - 256 - 0.TIF
     def _get_boxes(self, filename):
+        if pd.isna(filename):
+            # Empty filenames simply contain no boxes
+            return pd.DataFrame(columns=["id", "xmin", "xmax", "ymin", "ymax", "truncated"])
         # The xml parser reads in a tree structure
         this_id = utils.extract_base_id(filename)
         id_entries = []
