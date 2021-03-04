@@ -1,3 +1,4 @@
+import math
 import pathlib
 
 import cv2
@@ -69,7 +70,41 @@ shared_ids["label_filename"] = f"{str(label_dir)}/" + shared_ids['label_filename
 shared_ids["im_filename"] = f"{str(im_dir)}/" + shared_ids['im_filename'] + ".tif"
 shared_ids["height_filename"] = f"{str(im_dir)}/" + shared_ids['height_filename'] + ".tif"
 # Split into train test
+neg_ratios = [0.1, 0.25, 0.5, 0.75, 1, 2, 5, "all"]
+# Maintain consistent splits even when renewed
+np.random.seed(42)
 for i in range(5):
     train, test = train_test_split(shared_ids, test_size=TEST_SIZE, random_state=i)
-    train.to_csv(DIR_INPUT / f"460-464-466_201710_30_negatives_train_{i}.csv")
-    test.to_csv(DIR_INPUT / f"460-464-466_201710_30_negatives_test_{i}.csv")
+    train_neg_mask = train["label_filename"].isna()
+    train_neg_inds = train_neg_mask.to_numpy().nonzero()[0]
+    test_neg_mask = test["label_filename"].isna()
+    test_neg_inds = test_neg_mask.to_numpy().nonzero()[0]
+    # Make different files for different ratios of negative to positive samples
+    for neg_ratio in neg_ratios:
+        # Take a sample of the negative rows to remove
+        if neg_ratio == "all":
+            num_neg_train = len(train_neg_inds)
+            num_neg_test = len(test_neg_inds)
+        else:
+            num_pos_train = (~train_neg_mask).sum()
+            num_neg_train = round(num_pos_train * neg_ratio)
+            num_pos_test = (~test_neg_mask).sum()
+            num_neg_test = round(num_pos_test * neg_ratio)
+        # Now sample negative samples to include
+        sample_train_negs = np.random.choice(train_neg_inds, size=num_neg_train, replace=False)
+        train_keep = ~train_neg_mask
+        train_keep.iloc[sample_train_negs] = True
+        balanced_train = train.loc[train_keep]
+        balanced_train.to_csv(DIR_INPUT / f"460-464-466_201710_30_neg_{neg_ratio}_train_{i}.csv")
+        # Now the test set
+        sample_test_negs = np.random.choice(test_neg_inds, size=num_neg_test, replace=False)
+        test_keep = ~test_neg_mask
+        test_keep.iloc[sample_test_negs] = True
+        balanced_test = test.loc[test_keep]
+        balanced_test.to_csv(DIR_INPUT / f"460-464-466_201710_30_neg_{neg_ratio}_test_{i}.csv")
+# Write the normal files without negatives as well
+shared_ids = shared_ids.loc[~shared_ids["label_filename"].isna()]
+for i in range(5):
+    train, test = train_test_split(shared_ids, test_size=TEST_SIZE, random_state=i)
+    train.to_csv(DIR_INPUT / f"460-464-466_201710_30_train_{i}.csv")
+    test.to_csv(DIR_INPUT / f"460-464-466_201710_30_test_{i}.csv")
