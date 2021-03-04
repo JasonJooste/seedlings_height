@@ -2,6 +2,7 @@ import copy
 import logging
 import math
 import pathlib
+import re
 
 import torch
 from pycocotools.coco import COCO
@@ -33,6 +34,10 @@ def get_dataloader(params):
         train_file = params["data_file"]["train_file"]
     else:
         train_file = params["train_file"]
+    if "train_neg_ratio" in params:
+        assert "test_neg_ratio" in params
+        # Use regular expressions to replace the existing ratio with the ratio being tested
+        train_file = re.sub(r"(.*neg)_[^_]*_(.*\.csv)", fr"\1_{params['train_neg_ratio']}_\2", train_file)
     train_file_path = base_dir.joinpath(train_file)
     all_train = pd.read_csv(train_file_path)
     train, valid = train_test_split(all_train, test_size=params["valid_ratio"])
@@ -198,6 +203,11 @@ def test_model(model, params):
         test_file = params["data_file"]["test_file"]
     else:
         test_file = params["test_file"]
+    # Handle negative ratios here
+    if "test_neg_ratio" in params:
+        assert "train_neg_ratio" in params
+        # Use regular expressions to replace the existing ratio with the ratio being tested
+        test_file = re.sub(r"(.*neg)_[^_]*_(.*\.csv)", fr"\1_{params['test_neg_ratio']}_\2", test_file)
     test_file_path = base_dir.joinpath(test_file)
     test_data = pd.read_csv(test_file_path)
     test_dataset = SeedlingDataset(test_data)
