@@ -130,6 +130,7 @@ if __name__ == "__main__":
 
     # Build the models
     make_vanilla_model(template_dir, pretrained=True, trainable_backbone_layers=5)
+    make_vanilla_model(template_dir, pretrained=False, trainable_backbone_layers=5)
     make_final_layer_model(template_dir, pretrained=True, trainable_backbone_layers=5)
     make_first_layer_model(template_dir, pretrained=True, trainable_backbone_layers=5)
     make_first_layer_model(template_dir, pretrained=False, trainable_backbone_layers=5)
