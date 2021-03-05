@@ -88,6 +88,7 @@ def execute_models(params, use_cache=True):
         utils.set_seed(this_config["seed"])
         # The model doesn't exist yet - train it
         logger.log(logging.INFO, "=======================================================================================================")
+        logger.log(logging.INFO, f"Model {ind} from {len(search_list)} ({ind / len(search_list) * 100 :.0f}%)")
         logger.log(logging.INFO, f"Training new config: {this_config}")
         # Set up MLFlow tracking of this config
         mlflow.set_experiment(experiment_name=this_config["task_name"])
