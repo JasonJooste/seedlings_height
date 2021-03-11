@@ -5,7 +5,7 @@ from torchvision.models._utils import IntermediateLayerGetter
 from torchvision.models.detection.anchor_utils import AnchorGenerator
 from torchvision.models.detection.backbone_utils import BackboneWithFPN
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor, TwoMLPHead
-from torchvision.ops import FeaturePyramidNetwork
+from torchvision.ops import FeaturePyramidNetwork, MultiScaleRoIAlign
 from torchvision.ops import misc as misc_nn_ops
 import numpy as np
 
@@ -191,3 +191,80 @@ def make_trained_backbone_model(model_dir):
     # Now save the model
     path = model_dir / f"RCNN-resnet-50_5_layer_trained_backbone.pt"
     torch.save(model, path)
+
+def make_pre_rpn_pretrained_model(model_dir, returned_layers, pooling_layer=False, out_channels=256):
+    assert min(returned_layers) > 0 and max(
+        returned_layers) < 5, "Returned layers must correspond to layers in the resnet"
+    num_orig_out_channels = 256
+    returned_layers = returned_layers.copy()
+    rpn_returned = returned_layers.copy()
+    if pooling_layer:
+        rpn_returned.append(5)
+    assert out_channels <= num_orig_out_channels, "The original model only had 256 layers per backbone FPN feature map"
+    trainable_backbone_layers = 5
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True,
+                                                                 trainable_backbone_layers=trainable_backbone_layers)
+    # If we keep the pooling layer that is the fifth and final layer of the FPN output
+    ####################################################################################################################
+    # The FPN of the backbone needs to be adapted
+    fpn_outputs_to_keep = np.array(returned_layers) - 1
+    # The missing layers need to be removed from the list of backbone layers to access
+    missing_layers = [f'layer{k}' for k in [1, 2, 3, 4] if k not in returned_layers]
+    if not pooling_layer:
+        model.backbone.fpn.extra_blocks = None
+    for missing_layer in missing_layers:
+        del model.backbone.body.return_layers[missing_layer]
+    # Only keep the specified FPN layers
+    new_inner = [x for i, x in enumerate(model.backbone.fpn.inner_blocks) if i in fpn_outputs_to_keep]
+    model.backbone.fpn.inner_blocks = torch.nn.ModuleList(new_inner)
+    new_layer = [x for i, x in enumerate(model.backbone.fpn.layer_blocks) if i in fpn_outputs_to_keep]
+    model.backbone.fpn.layer_blocks = torch.nn.ModuleList(new_layer)
+    # Now loop through the kept layers and reduce them to the correct number of out channels
+    for i in range(len(model.backbone.fpn.layer_blocks)):
+        conv = model.backbone.fpn.layer_blocks[i]
+        conv.weight = torch.nn.Parameter(conv.weight[:out_channels])
+        conv.bias = torch.nn.Parameter(conv.bias[:out_channels])
+        conv.out_channels = out_channels
+    ####################################################################################################################
+    # We now need to alter the RPN to accomodate the new size
+    #
+    ANCHOR_SIZES = [(32,), (64,), (128,), (256,), (512,)]
+    our_anchor_sizes = [ANCHOR_SIZES[ind-1] for ind in rpn_returned]
+    aspect_ratios = ((0.5, 1.0, 2.0),) * len(our_anchor_sizes)
+    model.rpn.anchor_generator = AnchorGenerator(
+        our_anchor_sizes, aspect_ratios)
+    ####################################################################################################################
+    # Now the rpn head
+    cov_weight = model.rpn.head.conv.weight
+    new_shape = list(cov_weight.shape)
+    new_shape[1] = 1
+    new_weights = torch.zeros(new_shape)
+    xavier_normal_(new_weights)
+    combined_weights = torch.cat([cov_weight[:, :out_channels], new_weights], dim=1)
+    model.rpn.head.conv.weight = nn.Parameter(combined_weights)
+    ####################################################################################################################
+    # Now the RoI heads
+    #
+    # First the roi pooling
+    featmap_names = fpn_outputs_to_keep.astype(str)
+    box_roi_pool = MultiScaleRoIAlign(featmap_names, output_size=7, sampling_ratio=2)
+    model.roi_heads.box_roi_pool = box_roi_pool
+    # Now the box head
+    resolution = box_roi_pool.output_size[0]
+    box_head_weight = model.roi_heads.box_head.fc6.weight
+    rep_size = box_head_weight.shape[0]
+    end = out_channels * resolution ** 2
+    # Now add the new weights for the extra layer
+    new_weights = torch.zeros(rep_size, resolution ** 2)
+    xavier_normal_(new_weights)
+    combined_weights = torch.cat([box_head_weight[:, :end], new_weights], dim=1)
+    model.roi_heads.box_head.fc6.weight = torch.nn.Parameter(combined_weights)
+    # Assign model new class to override forward function so it can take height input (and ignore it)
+    model.__class__ = FasterRCNNPreRpn
+    # Replace the model's RoIHead with our version
+    model.roi_heads.__class__ = RoIHeadsVanilla
+    path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_really_pretrained_pre_rpn_{rpn_returned}_out_channels_{out_channels}.pt"
+    torch.save(model, path)
+
+
+
