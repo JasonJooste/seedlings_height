@@ -19,9 +19,10 @@ IMAGE_MEAN = [0.513498842716217, 0.5408999919891357, 0.5676814913749695, 0.00397
 IMAGE_STD = [0.21669578552246094, 0.22595597803592682, 0.2860477566719055, 0.007557219825685024]
 
 #
-def make_vanilla_model(model_dir, pretrained=True, trainable_backbone_layers=0):
+def make_vanilla_model(model_dir, pretrained=True, trainable_backbone_layers=0, pretrained_backbone=False):
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=pretrained,
-                                                   trainable_backbone_layers=trainable_backbone_layers)
+                                                   trainable_backbone_layers=trainable_backbone_layers,
+                                                                 pretrained_backbone=pretrained_backbone)
     # This model has no new weights
     model.new_weights = nn.ParameterList()
     # Assign model new class to override forward function so it can take height input (and ignore it)
@@ -35,13 +36,16 @@ def make_vanilla_model(model_dir, pretrained=True, trainable_backbone_layers=0):
     # box_predictor = FastRCNNPredictor(representation_size,num_classes)
     if pretrained:
         path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_pretrained.pt"
+    elif pretrained_backbone:
+        path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_pretrained_backbone.pt"
     else:
         path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_no_pretraining.pt"
     torch.save(model, path)
 
-def make_final_layer_model(model_dir, pretrained=True, trainable_backbone_layers=0):
+def make_final_layer_model(model_dir, pretrained=True, trainable_backbone_layers=0, pretrained_backbone=False):
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=pretrained,
-                                                                 trainable_backbone_layers=trainable_backbone_layers)
+                                                                 trainable_backbone_layers=trainable_backbone_layers,
+                                                                 pretrained_backbone=pretrained_backbone)
     # Change the model class so the model uses our forward function
     model.__class__ = FasterRCNNEndHeights
     # Change the roi heads class so they use our forward function
@@ -70,13 +74,17 @@ def make_final_layer_model(model_dir, pretrained=True, trainable_backbone_layers
     model.roi_heads.box_predictor.cls_score = nn.Linear(representation_size, NUM_CLASSES)
     if pretrained:
         path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_pretrained_final.pt"
+    elif pretrained_backbone:
+        path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_pretrained_backbone_final.pt"
     else:
         path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_no_pretraining_final.pt"
     torch.save(model, path)
 
-def make_first_layer_model(model_dir, pretrained=True, trainable_backbone_layers=0):
+
+def make_first_layer_model(model_dir, pretrained=True, trainable_backbone_layers=0, pretrained_backbone=False):
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=pretrained,
-                                                                 trainable_backbone_layers=trainable_backbone_layers)
+                                                                 trainable_backbone_layers=trainable_backbone_layers,
+                                                                 pretrained_backbone=pretrained_backbone)
     # Change the model class so the model uses our forward function
     model.__class__ = FasterRCNNStartHeights
     # Don't need to change the roi_heads. Everything is normal there
@@ -98,6 +106,8 @@ def make_first_layer_model(model_dir, pretrained=True, trainable_backbone_layers
     model.roi_heads.box_predictor.cls_score = nn.Linear(representation_size, NUM_CLASSES)
     if pretrained:
         path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_pretrained_first.pt"
+    elif pretrained_backbone:
+        path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_pretrained_backbone_first.pt"
     else:
         path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_no_pretraining_first.pt"
     torch.save(model, path)
@@ -177,20 +187,6 @@ def make_pre_roi_model(model_dir, returned_layers, pretrained=True, pooling_laye
         path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_no_pretraining_pre_rpn_{returned_layers}_out_channels_{out_channels}.pt"
     torch.save(model, path)
 
-def make_trained_backbone_model(model_dir):
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, pretrained_backbone=True)
-    # This model has no new weights
-    model.new_weights = nn.ParameterList()
-    # Assign model new class to override forward function so it can take height input (and ignore it)
-    model.__class__ = FasterRCNNVanilla
-    # Replace the model's RoIHead with our version
-    model.roi_heads.__class__ = RoIHeadsVanilla
-    # Assign a new class prediction layer for two classes
-    representation_size = model.roi_heads.box_predictor.cls_score.in_features
-    model.roi_heads.box_predictor.cls_score = nn.Linear(representation_size, NUM_CLASSES)
-    # Now save the model
-    path = model_dir / f"RCNN-resnet-50_5_layer_trained_backbone.pt"
-    torch.save(model, path)
 
 def make_pre_rpn_pretrained_model(model_dir, returned_layers, pooling_layer=False, out_channels=256):
     assert min(returned_layers) > 0 and max(

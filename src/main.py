@@ -130,41 +130,46 @@ if __name__ == "__main__":
     template_dir = base_dir / "models" / "templates"
 
     # Build the models
-    # make_vanilla_model(template_dir, pretrained=True, trainable_backbone_layers=5)
-    # make_vanilla_model(template_dir, pretrained=False, trainable_backbone_layers=5)
-    # make_final_layer_model(template_dir, pretrained=True, trainable_backbone_layers=5)
-    # make_final_layer_model(template_dir, pretrained=False, trainable_backbone_layers=5)
-    # make_first_layer_model(template_dir, pretrained=True, trainable_backbone_layers=5)
-    # make_first_layer_model(template_dir, pretrained=False, trainable_backbone_layers=5)
-    # make_normal_backbone_model(template_dir, pretrained=True, trainable_backbone_layers=5)
-    # make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=True, pooling_layer=True, out_channels=256)
-    # make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=True, pooling_layer=True, out_channels=64)
-    # make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=True, pooling_layer=False, out_channels=256)
-    # make_pre_roi_model(template_dir, [4], pretrained=True, pooling_layer=True, out_channels=256)
-    # make_pre_roi_model(template_dir, [4], pretrained=True, pooling_layer=False, out_channels=256)
-    # make_pre_roi_model(template_dir, [4], pretrained=True, pooling_layer=False, out_channels=64)
-    # make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=False, pooling_layer=True, out_channels=256)
-    # make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=False, pooling_layer=True, out_channels=64)
-    # make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=False, pooling_layer=False, out_channels=256)
-    # make_pre_roi_model(template_dir, [4], pretrained=False, pooling_layer=True, out_channels=256)
-    # make_pre_roi_model(template_dir, [4], pretrained=False, pooling_layer=False, out_channels=256)
-    # make_pre_roi_model(template_dir, [4], pretrained=False, pooling_layer=False, out_channels=64)
-
-
+    ### Vanilla models
+    make_vanilla_model(template_dir, pretrained=True, trainable_backbone_layers=5)
+    make_vanilla_model(template_dir, pretrained=False, trainable_backbone_layers=5, pretrained_backbone=True)
+    make_vanilla_model(template_dir, pretrained=False, trainable_backbone_layers=5)
+    # Vanilla model with single feature map from backbone (not FPN)
+    make_normal_backbone_model(template_dir, pretrained=True, trainable_backbone_layers=5)
+    ### Final layer model
+    make_final_layer_model(template_dir, pretrained=True, trainable_backbone_layers=5)
+    make_final_layer_model(template_dir, pretrained=False, trainable_backbone_layers=5, pretrained_backbone=True)
+    make_final_layer_model(template_dir, pretrained=False, trainable_backbone_layers=5)
+    ### First layer model
+    make_first_layer_model(template_dir, pretrained=True, trainable_backbone_layers=5)
+    make_first_layer_model(template_dir, pretrained=False, trainable_backbone_layers=5, pretrained_backbone=True)
+    make_first_layer_model(template_dir, pretrained=False, trainable_backbone_layers=5)
+    ### Pre roi models
+    # [1,2,3,4,5] - 256
     make_pre_rpn_pretrained_model(template_dir, [1, 2, 3, 4], pooling_layer=True, out_channels=256)
+    make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=True, pooling_layer=True, out_channels=256)
+    make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=False, pooling_layer=True, out_channels=256)
+    # [1,2,3,4,5] - 64
     make_pre_rpn_pretrained_model(template_dir, [1, 2, 3, 4], pooling_layer=True, out_channels=64)
+    make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=True, pooling_layer=True, out_channels=64)
+    make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=False, pooling_layer=True, out_channels=64)
+    # [1,2,3,4] - 256
     make_pre_rpn_pretrained_model(template_dir, [1, 2, 3, 4], pooling_layer=False, out_channels=256)
+    make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=True, pooling_layer=False, out_channels=256)
+    make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=False, pooling_layer=False, out_channels=256)
+    # [4,5] - 256
     make_pre_rpn_pretrained_model(template_dir, [4], pooling_layer=True, out_channels=256)
+    make_pre_roi_model(template_dir, [4], pretrained=True, pooling_layer=True, out_channels=256)
+    make_pre_roi_model(template_dir, [4], pretrained=False, pooling_layer=True, out_channels=256)
+    # [4] - 256
     make_pre_rpn_pretrained_model(template_dir, [4], pooling_layer=False, out_channels=256)
+    make_pre_roi_model(template_dir, [4], pretrained=True, pooling_layer=False, out_channels=256)
+    make_pre_roi_model(template_dir, [4], pretrained=False, pooling_layer=False, out_channels=256)
+    # [4] - 64
     make_pre_rpn_pretrained_model(template_dir, [4], pooling_layer=False, out_channels=64)
-    #
-    # make_trained_backbone_model(template_dir)
-    make_pre_rpn_pretrained_model(template_dir, [1, 2, 3, 4], pooling_layer=True, out_channels=256)
-    make_pre_rpn_pretrained_model(template_dir, [1, 4], pooling_layer=True, out_channels=256)
-    # for pretrained in [True, False]:
-    #     for i in range(6):
-    #         template_dir = base_dir / "models" / "templates"
-    #         make_vanilla_model(template_dir, pretrained=pretrained, trainable_backbone_layers=i)
+    make_pre_roi_model(template_dir, [4], pretrained=True, pooling_layer=False, out_channels=64)
+    make_pre_roi_model(template_dir, [4], pretrained=False, pooling_layer=False, out_channels=64)
+    # Run the models
     execute_models(params, use_cache)
 
 
