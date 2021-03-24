@@ -8,23 +8,23 @@
 #################### MODEL LOCATION ####################
 'model_type': ["RCNN"]
 'model_name': ["RCNN-resnet-50"]
-'base_model_path': [ "models/templates/RCNN-resnet-50_5_layer_really_pretrained_pre_rpn_[1, 2, 3, 4, 5]_out_channels_256.pt",
-                     "models/templates/RCNN-resnet-50_5_layer_really_pretrained_pre_rpn_[1, 2, 3, 4, 5]_out_channels_64.pt",
-                     "models/templates/RCNN-resnet-50_5_layer_really_pretrained_pre_rpn_[1, 2, 3, 4]_out_channels_256.pt",
-                     "models/templates/RCNN-resnet-50_5_layer_really_pretrained_pre_rpn_[4, 5]_out_channels_256.pt",
-                     "models/templates/RCNN-resnet-50_5_layer_really_pretrained_pre_rpn_[4]_out_channels_256.pt",
-                     "models/templates/RCNN-resnet-50_5_layer_really_pretrained_pre_rpn_[4]_out_channels_64.pt"]
+'base_model_path': ["models/templates/RCNN-resnet-50_5_layer_pretrained_pre_rpn_[1, 2, 3, 4, 5]_out_channels_256.pt",
+                    "models/templates/RCNN-resnet-50_5_layer_pretrained_pre_rpn_[1, 2, 3, 4, 5]_out_channels_64.pt",
+                    "models/templates/RCNN-resnet-50_5_layer_pretrained_pre_rpn_[1, 2, 3, 4]_out_channels_256.pt",
+                    "models/templates/RCNN-resnet-50_5_layer_pretrained_pre_rpn_[4, 5]_out_channels_256.pt",
+                    "models/templates/RCNN-resnet-50_5_layer_pretrained_pre_rpn_[4]_out_channels_256.pt",
+                    "models/templates/RCNN-resnet-50_5_layer_pretrained_pre_rpn_[4]_out_channels_64.pt"]
 'output_dir': ["models/trained"]
 #################### TASK ####################
-'task_name': ["temp"]
-'task_description': ["Test all of the models but with no pretraining and a longer train time"]
+'task_name': ["seedlings_pre_rpn_half_neg"]
+'task_description': ["Test the height injection network with negative samples inlcuded"]
 # Could include optimizer hyperparams by making this nested. Maybe different config files for optimiser here?
 #################### TRAINING ####################
 'optimiser': ['SGD']
 'learning_rate': [2.0e-3]
 'momentum': [0.9]
 'weight_decay': [1.0e-4]
-'epochs': [1]
+'epochs': [50]
 'patience': [300]
 'valid_ratio': [0.1]
 'dataloader_num_workers': [5]
@@ -32,10 +32,10 @@
 'eval_batch_size': [5]
 'max_seq_length': [512]
 'logging_steps': [2]
-'seed': [42, 1337]
+'seed': [1337, 42, 666]
 'num_weights_tracked': [10]
 'device': ["cuda:1"]
-'develop': [True]
+'develop': [False]
 'clip': [1]
 # For the moment can choose from [0.1, 0.25, 0.5, 0.75, 1, 2, 5, "all"]
 'test_neg_ratio': [0.5]
