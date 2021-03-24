@@ -1,3 +1,4 @@
+import contextlib
 import os
 import random
 
@@ -123,12 +124,11 @@ def set_seed(seed):
 def block_print(func):
     """A function decorator to block printing within the function"""
     def non_print_function(*args, **kwargs):
-        prev_out = sys.stdout
-        with open(os.devnull, 'w') as sys.stdout:
+        with open(os.devnull, "w") as f, contextlib.redirect_stdout(f):
             result = func(*args, **kwargs)
-        sys.stdout = prev_out
         return result
     return non_print_function
+
 
 def get_alive_tensors():
     alive_tensors = []
