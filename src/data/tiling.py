@@ -130,12 +130,6 @@ def resize_files(fn1, fn2):
         return # TODO: This could be better. Maybe an exception should be thrown
     gt1 = data1.GetGeoTransform()
     gt2 = data2.GetGeoTransform()
-    # Check that the top left coordinates are the same
-    # Index 0 is the x coord and index 3 is the y coord of the top left hand pixel
-    # TODO: This needs to be better handled. It is also a function of the resolution of the pixels of both images.
-    # TODO: Could also check the number of channels
-    if gt1[0] - gt2[0] > EPS or gt1[3] - gt2[3] > EPS:
-        return # This could be extended to shift the second image as well
     # Entries 1 and 5 show the distance moved per pixel in x and y
     scale1x = gt1[1]
     scale1y = gt1[5]
@@ -207,13 +201,17 @@ def remove_pad_tl(image_path, shift):
     return im_new_path
 
 
-def process_images(image_path, big_height_path, slice_h=256, slice_w=256):
+def process_images(image_path, height_path, large_height, slice_h=256, slice_w=256, clear=False):
+    assert image_path.exists() and height_path.exists()
     image_path = pathlib.Path(image_path)
-    big_height_path = pathlib.Path(big_height_path)
+    height_path = pathlib.Path(height_path)
     # Convert the original lane to a 3-channel image
     new_image_path = convert_to_3_layer(image_path)
-    # Take the corresponding slice out of the large height map for the height data
-    new_height_path = extract_matching_image(big_height_path, new_image_path)
+    if large_height:
+        # Take the corresponding slice out of the large height map for the height data
+        new_height_path = extract_matching_image(height_path, new_image_path)
+    else:
+        new_height_path = height_path
     new_height_path = resize_files(new_image_path, new_height_path)
     # Remove the 35 pixel top-left pad on both images (first 33 are white and there is another 2 pixels off in the
     # xml files)
@@ -221,9 +219,10 @@ def process_images(image_path, big_height_path, slice_h=256, slice_w=256):
     new_height_path = remove_pad_tl(new_height_path, 35)
     final_dir = base_dir / "data" / "processed"
     # clear all previous files
-    prev_files = final_dir.glob("*_cut-*.tif")
-    for f in prev_files:
-        os.remove(f)
+    if clear:
+        prev_files = final_dir.glob("*_cut-*.tif")
+        for f in prev_files:
+            os.remove(f)
     # Split the images
     im_final_path = final_dir / im_new_path.name
     h_final_path = final_dir / new_height_path.name
@@ -235,14 +234,19 @@ def process_images(image_path, big_height_path, slice_h=256, slice_w=256):
 # Run for our lanes
 gdal.UseExceptions()
 raw_dir = base_dir / "data" / "raw" / "images"
-lane_files = ["site_460_201710_030m_ortho_als11.tif",
-              "site_464_201710_030m_ortho_als11.tif",
-              "site_466_201710_030m_ortho_als11.tif"]
-height_path = base_dir.joinpath("data/raw/images/KirbyLeafOff2017DSMEntireSite.tif").resolve()
-for lane_file in lane_files:
-    im_path = raw_dir / lane_file
-    process_images(im_path, height_path)
+# The high def data from 464
+im_full = raw_dir / "site_464_201710_030m_ortho_als11.tif"
+height_path = raw_dir / "old_height_464.tif"
+process_images(im_full, height_path, False, clear=True)
+# Now get the normal data for all lanes
+lane_files = {460: "site_460_201710_030m_ortho_als11.tif",
+              464: "site_464_201710_030m_ortho_als11.tif",
+              466: "site_466_201710_030m_ortho_als11.tif"}
 
+CHM_path = raw_dir / "KirbyLeafOff2017DSMEntireSite.tif"
+for im_path in lane_files.values():
+    im_full = raw_dir / im_path
+    process_images(im_full, CHM_path, True, clear=False)
 
 
 
@@ -286,6 +290,11 @@ for lane_file in lane_files:
 #     ax.get_xaxis().set_visible(False)
 #     ax.get_yaxis().set_visible(False)
 #
-# height_path = base_dir / "data" / "interim" / "site_466_201710_CHM10cm_large_buffer_removed.tif"
+# height_path = base_dir / "data" / "interim" / "site_460_GNDDIPC_3m_large_buffer_removed.tif"
+# colour_path = base_dir / "data" / "interim" / "site_460_201710_030m_ortho_als11_3channels.tif"
+#
+# fig, ax = plt.subplots()
+# plot_two_images(height_path, colour_path, ax)
+# plt.show()
 # height_path = base_dir / "data" / "interim" / "site_466_201710_CHM10cm_large_buffer_removed.tif"
 
