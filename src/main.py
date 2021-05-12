@@ -114,8 +114,7 @@ def execute_models(params, use_cache=True):
         root_logger.handlers.pop()
 
 
-if __name__ == "__main__":
-    config_filename = sys.argv[1]
+def run(config_filename):
     config_file = open(config_filename, 'r')
     params = yaml.load(config_file)
     if not "develop" in params:
@@ -126,26 +125,40 @@ if __name__ == "__main__":
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
     # logging.basicConfig(stream=sys.stderr, level=logging.ERROR)
     mlflow.set_tracking_uri("http://mlflow.dbs.ifi.lmu.de:5000")
-    use_cache = False
-    template_dir = base_dir / "models" / "templates"
+    use_cache = True
+    rebuild = True
+    if rebuild:
+        template_dir = base_dir / "models" / "templates"
+        build_models(template_dir)
+    execute_models(params, use_cache)
 
-    # Build the models
-    ### Vanilla models
+
+if __name__ == "__main__":
+    config_filenames = sys.argv[1:]
+    for config_filname in config_filenames:
+        print("*" * 80)
+        print(f"Executing config file {config_filname}")
+        run(config_filname)
+
+
+def build_models(template_dir):
+    # # Build the models
+    # ### Vanilla models
     make_vanilla_model(template_dir, pretrained=True, trainable_backbone_layers=5)
     make_vanilla_model(template_dir, pretrained=False, trainable_backbone_layers=5, pretrained_backbone=True)
     make_vanilla_model(template_dir, pretrained=False, trainable_backbone_layers=5)
-    # Vanilla model with single feature map from backbone (not FPN)
+    # # Vanilla model with single feature map from backbone (not FPN)
     make_normal_backbone_model(template_dir, pretrained=True, trainable_backbone_layers=5)
-    ### Final layer model
+    # ### Final layer model
     make_final_layer_model(template_dir, pretrained=True, trainable_backbone_layers=5)
     make_final_layer_model(template_dir, pretrained=False, trainable_backbone_layers=5, pretrained_backbone=True)
     make_final_layer_model(template_dir, pretrained=False, trainable_backbone_layers=5)
-    ### First layer model
+    # ### First layer model
     make_first_layer_model(template_dir, pretrained=True, trainable_backbone_layers=5)
     make_first_layer_model(template_dir, pretrained=False, trainable_backbone_layers=5, pretrained_backbone=True)
     make_first_layer_model(template_dir, pretrained=False, trainable_backbone_layers=5)
-    ### Pre roi models
-    # [1,2,3,4,5] - 256
+    # ### Pre roi models
+    # # [1,2,3,4,5] - 256
     make_pre_rpn_pretrained_model(template_dir, [1, 2, 3, 4], pooling_layer=True, out_channels=256)
     make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=True, pooling_layer=True, out_channels=256)
     make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=False, pooling_layer=True, out_channels=256)
@@ -169,7 +182,4 @@ if __name__ == "__main__":
     make_pre_rpn_pretrained_model(template_dir, [4], pooling_layer=False, out_channels=64)
     make_pre_roi_model(template_dir, [4], pretrained=True, pooling_layer=False, out_channels=64)
     make_pre_roi_model(template_dir, [4], pretrained=False, pooling_layer=False, out_channels=64)
-    # Run the models
-    execute_models(params, use_cache)
-
 
