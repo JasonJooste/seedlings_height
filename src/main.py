@@ -132,15 +132,6 @@ def run(config_filename):
         build_models(template_dir)
     execute_models(params, use_cache)
 
-
-if __name__ == "__main__":
-    config_filenames = sys.argv[1:]
-    for config_filname in config_filenames:
-        print("*" * 80)
-        print(f"Executing config file {config_filname}")
-        run(config_filname)
-
-
 def build_models(template_dir):
     # # Build the models
     # ### Vanilla models
@@ -182,4 +173,15 @@ def build_models(template_dir):
     make_pre_rpn_pretrained_model(template_dir, [4], pooling_layer=False, out_channels=64)
     make_pre_roi_model(template_dir, [4], pretrained=True, pooling_layer=False, out_channels=64)
     make_pre_roi_model(template_dir, [4], pretrained=False, pooling_layer=False, out_channels=64)
+
+
+if __name__ == "__main__":
+    config_filenames = sys.argv[1:]
+    for config_filname in config_filenames:
+        print("*" * 80)
+        print(f"Executing config file {config_filname}")
+        run(config_filname)
+
+
+
 
