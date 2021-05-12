@@ -273,12 +273,6 @@ def fit(params):
                 metrics[f"train_{loss_name}"] = av_loss
             for loss_name, av_loss in valid_av_losses.items():
                 metrics[f"valid_{loss_name}"] = av_loss
-
-
-            #TODO: Remove
-            metrics["test_MAP_step"] = test_model(model, params).item()
-            
-            
             # _, train_MAP = train_one_epoch(model, train_dataloader, False, params)
             metrics["train_MAP"] = train_MAP
             metrics["valid_MAP"] = valid_MAP
