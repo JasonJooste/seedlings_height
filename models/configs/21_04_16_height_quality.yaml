@@ -1,0 +1,41 @@
+# Is it possible to have hierarchical config files? XML? Hydra?
+#################### DATA LOCATION ####################
+'data_file': [{"train_file": 'data/464_201710_30_HD_neg_0.5_train_0.csv', "test_file": 'data/464_201710_30_HD_neg_0.5_test_0.csv'},
+              {"train_file": 'data/464_201710_30_HD_neg_0.5_train_1.csv', "test_file": 'data/464_201710_30_HD_neg_0.5_test_1.csv'},
+              {"train_file": 'data/464_201710_30_HD_neg_0.5_train_2.csv', "test_file": 'data/464_201710_30_HD_neg_0.5_test_2.csv'},
+              {"train_file": 'data/464_201710_30_HD_neg_0.5_train_3.csv', "test_file": 'data/464_201710_30_HD_neg_0.5_test_3.csv'},
+              {"train_file": 'data/464_201710_30_HD_neg_0.5_train_4.csv', "test_file": 'data/464_201710_30_HD_neg_0.5_test_4.csv'},
+              # The original data
+              { "train_file": 'data/464_201710_30_neg_0.5_train_0.csv', "test_file": 'data/464_201710_30_neg_0.5_test_0.csv' },
+              { "train_file": 'data/464_201710_30_neg_0.5_train_1.csv', "test_file": 'data/464_201710_30_neg_0.5_test_1.csv' },
+              { "train_file": 'data/464_201710_30_neg_0.5_train_2.csv', "test_file": 'data/464_201710_30_neg_0.5_test_2.csv' },
+              { "train_file": 'data/464_201710_30_neg_0.5_train_3.csv', "test_file": 'data/464_201710_30_neg_0.5_test_3.csv' },
+              { "train_file": 'data/464_201710_30_neg_0.5_train_4.csv', "test_file": 'data/464_201710_30_neg_0.5_test_4.csv' }]
+#################### MODEL LOCATION ####################
+'model_type': ["RCNN"]
+'model_name': ["RCNN-resnet-50"]
+'base_model_path': ["models/templates/RCNN-resnet-50_5_layer_really_pretrained_pre_rpn_[1, 2, 3, 4, 5]_out_channels_256.pt",
+                    "models/templates/RCNN-resnet-50_5_layer_no_pretraining_pre_rpn_[1, 2, 3, 4, 5]_out_channels_256.pt"]
+'output_dir': ["models/trained"]
+#################### TASK ####################
+'task_name': ["seedlings_height_quality"]
+'task_description': ["Testing the improvement from increased height data quality"]
+# Could include optimizer hyperparams by making this nested. Maybe different config files for optimiser here?
+#################### TRAINING ####################
+'optimiser': ['SGD']
+'learning_rate': [2.0e-3]
+'momentum': [0.9]
+'weight_decay': [1.0e-4]
+'epochs': [35]
+'patience': [300]
+'valid_ratio': [0.1]
+'dataloader_num_workers': [5]
+'train_batch_size': [5]
+'eval_batch_size': [5]
+'max_seq_length': [512]
+'logging_steps': [2]
+'seed': [666, 43110, 1234]
+'num_weights_tracked': [10]
+'device': ["cuda:0"]
+'develop': [False]
+'clip': [1]

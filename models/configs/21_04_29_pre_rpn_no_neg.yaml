@@ -8,15 +8,13 @@
 #################### MODEL LOCATION ####################
 'model_type': ["RCNN"]
 'model_name': ["RCNN-resnet-50"]
-'base_model_path': ["models/templates/RCNN-resnet-50_5_layer_pretrained_pre_rpn_[1, 2, 3, 4, 5]_out_channels_256.pt",
-                    "models/templates/RCNN-resnet-50_5_layer_pretrained_pre_rpn_[1, 2, 3, 4, 5]_out_channels_64.pt",
-                    "models/templates/RCNN-resnet-50_5_layer_pretrained_pre_rpn_[1, 2, 3, 4]_out_channels_256.pt",
-                    "models/templates/RCNN-resnet-50_5_layer_pretrained_pre_rpn_[4, 5]_out_channels_256.pt"
-                      ]
+'base_model_path': ["models/templates/RCNN-resnet-50_5_layer_really_pretrained_pre_rpn_[1, 2, 3, 4, 5]_out_channels_256.pt",
+                    "models/templates/RCNN-resnet-50_5_layer_pretrained.pt"]
+
 'output_dir': ["models/trained"]
 #################### TASK ####################
-'task_name': ["seedlings_pre_rpn"]
-'task_description': ["Test the new pre-rpn injeciton of height information against the existing vanilla models"]
+'task_name': ["seedlings_pre_rpn_pretrained_no_negatives"]
+'task_description': ["Run the fully pretrained pre-rpn model on the standard data without negative samples. This will be compared against the fully pretrained vanilla"]
 # Could include optimizer hyperparams by making this nested. Maybe different config files for optimiser here?
 #################### TRAINING ####################
 'optimiser': ['SGD']
@@ -31,7 +29,7 @@
 'eval_batch_size': [5]
 'max_seq_length': [512]
 'logging_steps': [2]
-'seed': [1337]
+'seed': [1337, 666, 43110, 1234, 42]
 'num_weights_tracked': [10]
 'device': ["cuda:0"]
 'develop': [False]

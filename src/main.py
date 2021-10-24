@@ -151,6 +151,11 @@ def build_models(template_dir):
     # ### Pre roi models
     # # [1,2,3,4,5] - 256
     make_pre_rpn_pretrained_model(template_dir, [1, 2, 3, 4], pooling_layer=True, out_channels=256)
+    make_pre_rpn_pretrained_model(template_dir, [1, 2, 3, 4], pooling_layer=True, out_channels=192)
+    make_pre_rpn_pretrained_model(template_dir, [1, 2, 3, 4], pooling_layer=True, out_channels=128)
+    make_pre_rpn_pretrained_model(template_dir, [1, 2, 3, 4], pooling_layer=True, out_channels=64)
+    make_pre_rpn_pretrained_model(template_dir, [1, 2, 3, 4], pooling_layer=True, out_channels=32)
+    make_pre_rpn_pretrained_model(template_dir, [1, 2, 3, 4], pooling_layer=True, out_channels=16)
     make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=True, pooling_layer=True, out_channels=256)
     make_pre_roi_model(template_dir, [1, 2, 3, 4], pretrained=False, pooling_layer=True, out_channels=256)
     # [1,2,3,4,5] - 64
