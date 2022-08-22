@@ -14,20 +14,21 @@ from random import shuffle
 import pandas as pd
 from src.data.data_classes import SeedlingDataset
 from src.models.make_base_models import *
-from src.models.train_model import fit
+from src.models.train_model import fit_and_test
 from src.models.train_model import train_one_epoch
 from datetime import datetime
 import copy
 import pathlib
 
-#TODO: Not sure if it is good practice to leave this here to be executed at import.
 module_path = pathlib.Path(__file__).parent
 base_dir = module_path.parent.absolute()
 logger = logging.getLogger(__name__)
 
+
 def get_existing_config(this_config, existing_configs, config_filenames):
+    """Return a list of files whose configs match the given config and the config. If no files match return None"""
     assert len(existing_configs) == len(config_filenames)
-    # Each config file has one extra entry: Model_path. This needs to be removed before comparison
+    # Each config file has a number of extra entries that need to be removed first
     without_model_path = copy.deepcopy(existing_configs)
     for conf_dict in without_model_path:
         conf_dict.pop("trained_model_path", None)
@@ -54,6 +55,7 @@ def get_existing_config(this_config, existing_configs, config_filenames):
 
 
 def gen_model_filename(config, iter):
+    """Generate a filename for the model that includes the configuration and time"""
     date_str = datetime.today().strftime('%Y-%m-%d')
     filename = f"{date_str}_{config['task_name']}_{str(iter)}"
     path = base_dir.joinpath(config['output_dir']) / filename
@@ -61,6 +63,8 @@ def gen_model_filename(config, iter):
 
 
 def execute_models(params, use_cache=True):
+    """Train, test and save all hyperparameter configurations contained in a configuration dict
+    """
     # Read in existing models
     trained_folder = base_dir / "models" / "trained"
     existing_config_fns = utils.get_filenames(trained_folder, ".yaml", keep_ext=True, full_path=True)
@@ -68,26 +72,28 @@ def execute_models(params, use_cache=True):
     for filename in existing_config_fns:
         with open(filename, 'r') as file:
             existing_configs.append(yaml.safe_load(file))
-    # Get list of individual tasks
+    # Get list of individual tasks by taking the cartesian product of all iterable entries
     search_list = [dict(zip(params.keys(), values)) for values in itertools.product(*params.values())]
     shuffle(search_list)
     # Run training
     for ind, this_config in enumerate(search_list):
         filename = gen_model_filename(this_config, ind)
-        #Set up logging for this run
+        # Set up logging for this run
         handler = logging.FileHandler(filename.with_suffix(".log"))
         root_logger = logging.getLogger()
         root_logger.addHandler(handler)
         # Check for existing model files
-        (existing_config, config_fn) = get_existing_config(this_config, existing_configs, existing_config_fns)
+        existing_config, config_fn = get_existing_config(this_config, existing_configs, existing_config_fns)
         if use_cache and existing_config:
             # The model file already exists
-            logger.log(logging.INFO, f"This model has already been trained and is stored in {config_fn}/.py - training skipped.")
+            logger.log(logging.INFO,
+                       f"This model has already been trained and is stored in {config_fn}/.py - training skipped.")
             continue
         # Set the seed
         utils.set_seed(this_config["seed"])
         # The model doesn't exist yet - train it
-        logger.log(logging.INFO, "=======================================================================================================")
+        logger.log(logging.INFO,
+                   "="*80)
         logger.log(logging.INFO, f"Model {ind} from {len(search_list)} ({ind / len(search_list) * 100 :.0f}%)")
         logger.log(logging.INFO, f"Training new config: {this_config}")
         # Set up MLFlow tracking of this config
@@ -96,10 +102,9 @@ def execute_models(params, use_cache=True):
         for param, val in this_config.items():
             mlflow.log_param(param, val)
         # Fit model
-        model, best_model_epoch, test_MAP = fit(this_config)
+        model, best_model_epoch, test_MAP = fit_and_test(this_config)
         # Save the model file
         if not this_config["develop"]:
-            filename.with_suffix(".pt")
             torch.save(model, filename.with_suffix(".pt"))
         # Save the config file
         this_config["trained_model_path"] = str(filename.with_suffix(".pt"))
@@ -115,6 +120,7 @@ def execute_models(params, use_cache=True):
 
 
 def run(config_filename):
+    """ Run the seedlings analysis for a given config file"""
     config_file = open(config_filename, 'r')
     params = yaml.load(config_file)
     if not "develop" in params:
@@ -132,7 +138,11 @@ def run(config_filename):
         build_models(template_dir)
     execute_models(params, use_cache)
 
+
 def build_models(template_dir):
+    """Build the modified Faster-RCNN models with new parameters for different input types.
+
+    These models will later be loaded and trained with a given set of hyperparameters"""
     # # Build the models
     # ### Vanilla models
     make_vanilla_model(template_dir, pretrained=True, trainable_backbone_layers=5)
@@ -186,7 +196,3 @@ if __name__ == "__main__":
         print("*" * 80)
         print(f"Executing config file {config_filname}")
         run(config_filname)
-
-
-
-
