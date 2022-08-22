@@ -1,57 +1,28 @@
-seedlings
-==============================
+# Adding height data to improve the detection of seedlings using Faster-RCNN
 
-Addition of height map data to drone images for the detection of seedlings
+Addition of height map data to drone images for the detection of seedlings.
+Five different model structures are tested:
 
-Project Organization
-------------
+- The unmodified Faster-RCN network (Vanilla)
+- Height as a fourth image channel to the first convolutional layer (First)
+- Height as an input after region of interest pooling and before the final dense classification and bounding box
+  adjustment heads (Final)
+- Height concatenated to the output of the backbone before RoI pooling, but after the region proposal network (pre-RoI)
+- Height concatenated to the output of the backbone before RoI pooling and the RPN (Pre-RPN)
 
-    ├── LICENSE
-    ├── Makefile           <- Makefile with commands like `make data` or `make train`
-    ├── README.md          <- The top-level README for developers using this project.
-    ├── data
-    │   ├── external       <- Data from third party sources.
-    │   ├── interim        <- Intermediate data that has been transformed.
-    │   ├── processed      <- The final, canonical data sets for modeling.
-    │   └── raw            <- The original, immutable data dump.
-    │
-    ├── docs               <- A default Sphinx project; see sphinx-doc.org for details
-    │
-    ├── models             <- Trained and serialized models, model predictions, or model summaries
-    │
-    ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-    │                         the creator's initials, and a short `-` delimited description, e.g.
-    │                         `1.0-jqp-initial-data-exploration`.
-    │
-    ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
-    │
-    ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-    │   └── figures        <- Generated graphics and figures to be used in reporting
-    │
-    ├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
-    │                         generated with `pip freeze > requirements.txt`
-    │
-    ├── setup.py           <- makes project pip installable (pip install -e .) so src can be imported
-    ├── src                <- Source code for use in this project.
-    │   ├── __init__.py    <- Makes src a Python module
-    │   │
-    │   ├── data           <- Scripts to download or generate data
-    │   │   └── make_dataset.py
-    │   │
-    │   ├── features       <- Scripts to turn raw data into features for modeling
-    │   │   └── build_features.py
-    │   │
-    │   ├── models         <- Scripts to train models and then use trained models to make
-    │   │   │                 predictions
-    │   │   ├── predict_model.py
-    │   │   └── train_model.py
-    │   │
-    │   └── visualization  <- Scripts to create exploratory and results oriented visualizations
-    │       └── visualize.py
-    │
-    └── tox.ini            <- tox file with settings for running tox; see tox.readthedocs.io
+These models are first generated (see src/models) and saved (in models/templates) and then loaded, trained, tested and
+stored for a given hyperparameter selection.
+The results are the saved to an MLFlow server.
 
+# Usage
 
---------
+Run the main file as a package with configuration files as arguments. The cartesian product of all iterables in the
+config file are then used to train and test a model, with the results saved in MLFlow.
+See the existing configuration files for an example of how to format them.
+For example:
 
-<p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
+```shell
+python3 -m src/main models/configs/21_06_17_first_test_long_cv2.yaml
+```
+
+<!-- unfortunately the location of the MLFlow server needs to be manually edited in the main and analysis-functions files>
