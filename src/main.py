@@ -1,24 +1,17 @@
+import copy
+import itertools
 import logging
-
-import os
+import pathlib
+import sys
+from datetime import datetime
+from random import shuffle
 
 import mlflow
-import torch
-from torch.utils.data import DataLoader
+import yaml
 
 import src.util.util as utils
-import sys
-import yaml
-import itertools
-from random import shuffle
-import pandas as pd
-from src.data.data_classes import SeedlingDataset
 from src.models.make_base_models import *
 from src.models.train_model import fit_and_test
-from src.models.train_model import train_one_epoch
-from datetime import datetime
-import copy
-import pathlib
 
 module_path = pathlib.Path(__file__).parent
 base_dir = module_path.parent.absolute()
