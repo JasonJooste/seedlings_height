@@ -2,37 +2,32 @@
 A file containing modifications to some functions of the torchvision packages
 """
 import logging
+import warnings
 from collections import OrderedDict
 
-import warnings
-from typing import Union
-
-import torchvision
-from torch.nn import AdaptiveAvgPool2d
-from torchvision.models.detection import FasterRCNN
-from torchvision.models.detection.roi_heads import fastrcnn_loss, RoIHeads
 import torch
 from torch import nn, Tensor
 from torch.jit.annotations import Optional, List, Dict, Tuple
-import torch.nn.functional as F
-from torchvision.ops import roi_align
-from torchvision.ops.poolers import _onnx_merge_levels, initLevelMapper, LevelMapper, MultiScaleRoIAlign
-
+from torch.nn import AdaptiveAvgPool2d
+from torchvision.models.detection import FasterRCNN
+from torchvision.models.detection.roi_heads import fastrcnn_loss, RoIHeads
 
 HEIGHT_MEAN = 0.003977019805461168
 HEIGHT_STD = 0.007557219825685024
 
 logger = logging.getLogger(__name__)
 
+
 class RoIHeadsVanilla(RoIHeads):
     """
     The RoIHeads class for integration of height data in the final NN layer
     """
+
     def forward(self,
-                features,      # type: Dict[str, Tensor]
-                proposals,     # type: List[Tensor]
+                features,  # type: Dict[str, Tensor]
+                proposals,  # type: List[Tensor]
                 image_shapes,  # type: List[Tuple[int, int]]
-                targets=None   # type: Optional[List[Dict[str, Tensor]]]
+                targets=None  # type: Optional[List[Dict[str, Tensor]]]
                 ):
         # type: (...) -> Tuple[List[Dict[str, Tensor]], Dict[str, Tensor]]
         """
@@ -44,7 +39,6 @@ class RoIHeadsVanilla(RoIHeads):
         """
         if targets is not None:
             for t in targets:
-                # TODO: https://github.com/pytorch/pytorch/issues/26731
                 floating_point_types = (torch.float, torch.double, torch.half)
                 assert t["boxes"].dtype in floating_point_types, 'target boxes must of float type'
                 assert t["labels"].dtype == torch.int64, 'target labels must of int64 type'
@@ -93,13 +87,14 @@ class RoIHeadsVanilla(RoIHeads):
         assert self.keypoint_roi_pool is None, "This functionality is not supported"
         return result, losses
 
+
 class RoIHeadsEndHeights(RoIHeads):
     def forward(self,
-                features,      # type: Dict[str, Tensor]
-                heights,       # type: [Tensor]
-                proposals,     # type: List[Tensor]
+                features,  # type: Dict[str, Tensor]
+                heights,  # type: [Tensor]
+                proposals,  # type: List[Tensor]
                 image_shapes,  # type: List[Tuple[int, int]]
-                targets=None   # type: Optional[List[Dict[str, Tensor]]]
+                targets=None  # type: Optional[List[Dict[str, Tensor]]]
                 ):
         # type: (...) -> Tuple[List[Dict[str, Tensor]], Dict[str, Tensor]]
         """
@@ -111,7 +106,6 @@ class RoIHeadsEndHeights(RoIHeads):
         """
         if targets is not None:
             for t in targets:
-                # TODO: https://github.com/pytorch/pytorch/issues/26731
                 floating_point_types = (torch.float, torch.double, torch.half)
                 assert t["boxes"].dtype in floating_point_types, 'target boxes must of float type'
                 assert t["labels"].dtype == torch.int64, 'target labels must of int64 type'
@@ -130,7 +124,7 @@ class RoIHeadsEndHeights(RoIHeads):
         # First the heights need to be in the correct format.
         heights = [height_im.unsqueeze(0) for height_im in heights]
         heights = torch.cat(heights, 0)
-        #Normalize the heights
+        # Normalize the heights
         heights = (heights - HEIGHT_MEAN) / HEIGHT_STD
         heights = {"heights": heights}
         box_heights = self.box_roi_pool(heights, proposals, image_shapes)
@@ -168,6 +162,7 @@ class RoIHeadsEndHeights(RoIHeads):
         assert self.keypoint_roi_pool is None, "This functionality is not supported"
         return result, losses
 
+
 class FasterRCNNEndHeights(FasterRCNN):
     def forward(self, images, heights, targets=None):
         # type: (List[Tensor], Optional[List[Dict[str, Tensor]]]) -> Tuple[Dict[str, Tensor], List[Dict[str, Tensor]]]
@@ -193,7 +188,7 @@ class FasterRCNNEndHeights(FasterRCNN):
                     if len(boxes.shape) != 2 or boxes.shape[-1] != 4:
                         raise ValueError("Expected target boxes to be a tensor"
                                          "of shape [N, 4], got {:}.".format(
-                                             boxes.shape))
+                            boxes.shape))
                 else:
                     raise ValueError("Expected target boxes to be of type "
                                      "Tensor, got {:}.".format(type(boxes)))
@@ -207,7 +202,7 @@ class FasterRCNNEndHeights(FasterRCNN):
         images, targets = self.transform(images, targets)
 
         # Check for degenerate boxes
-        # TODO: Move this to a function
+        # Note: This could be moved to a function
         if targets is not None:
             for target_idx, target in enumerate(targets):
                 boxes = target["boxes"]
@@ -252,15 +247,18 @@ class FasterRCNNEndHeights(FasterRCNN):
         new_weights = torch.narrow(extended_weights, 1, start, length)
         return nn.ParameterList([nn.Parameter(new_weights)])
 
+
 class FasterRCNNVanilla(FasterRCNN):
     """
     Wrapper around the standard class that can take the height argument (and ignore it)
     """
+
     def forward(self, images, heights, targets=None):
         return super().forward(images, targets)
 
     def get_new_weights(self):
         return nn.ParameterList()
+
 
 class FasterRCNNStartHeights(FasterRCNN):
     def forward(self, images, heights, targets=None):
@@ -293,7 +291,7 @@ class FasterRCNNStartHeights(FasterRCNN):
                     if len(boxes.shape) != 2 or boxes.shape[-1] != 4:
                         raise ValueError("Expected target boxes to be a tensor"
                                          "of shape [N, 4], got {:}.".format(
-                                             boxes.shape))
+                            boxes.shape))
                 else:
                     raise ValueError("Expected target boxes to be of type "
                                      "Tensor, got {:}.".format(type(boxes)))
@@ -306,7 +304,7 @@ class FasterRCNNStartHeights(FasterRCNN):
         images, targets = self.transform(images, targets)
 
         # Check for degenerate boxes
-        # TODO: Move this to a function
+        # Note: This could be moved to a function
         if targets is not None:
             for target_idx, target in enumerate(targets):
                 boxes = target["boxes"]
@@ -351,6 +349,7 @@ class FasterRCNNStartHeights(FasterRCNN):
         new_weights = torch.narrow(extended_weights, 1, start, length)
         return nn.ParameterList([nn.Parameter(new_weights)])
 
+
 class FasterRCNNPreRpn(FasterRCNN):
     def forward(self, images, heights, targets=None):
         # type: (List[Tensor], Optional[List[Dict[str, Tensor]]]) -> Tuple[Dict[str, Tensor], List[Dict[str, Tensor]]]
@@ -376,7 +375,7 @@ class FasterRCNNPreRpn(FasterRCNN):
                     if len(boxes.shape) != 2 or boxes.shape[-1] != 4:
                         raise ValueError("Expected target boxes to be a tensor"
                                          "of shape [N, 4], got {:}.".format(
-                                             boxes.shape))
+                            boxes.shape))
                 else:
                     raise ValueError("Expected target boxes to be of type "
                                      "Tensor, got {:}.".format(type(boxes)))
@@ -390,7 +389,7 @@ class FasterRCNNPreRpn(FasterRCNN):
         images, targets = self.transform(images, targets)
 
         # Check for degenerate boxes
-        # TODO: Move this to a function
+        # Note: This could be moved to a function
         if targets is not None:
             for target_idx, target in enumerate(targets):
                 boxes = target["boxes"]

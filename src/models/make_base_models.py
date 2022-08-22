@@ -1,27 +1,25 @@
+import numpy as np
 import torch
 import torchvision
+from torch import nn
 from torch.nn.init import xavier_normal_
-from torchvision.models._utils import IntermediateLayerGetter
 from torchvision.models.detection.anchor_utils import AnchorGenerator
 from torchvision.models.detection.backbone_utils import BackboneWithFPN
-from torchvision.models.detection.faster_rcnn import FastRCNNPredictor, TwoMLPHead
 from torchvision.ops import FeaturePyramidNetwork, MultiScaleRoIAlign
 from torchvision.ops import misc as misc_nn_ops
-import numpy as np
-
 
 from src.models.modifications import RoIHeadsEndHeights, FasterRCNNEndHeights, RoIHeadsVanilla, FasterRCNNStartHeights, \
     FasterRCNNVanilla, FasterRCNNPreRpn
-from torch import nn
 
 NUM_CLASSES = 2
 IMAGE_MEAN = [0.513498842716217, 0.5408999919891357, 0.5676814913749695, 0.003977019805461168]
 IMAGE_STD = [0.21669578552246094, 0.22595597803592682, 0.2860477566719055, 0.007557219825685024]
 
+
 #
 def make_vanilla_model(model_dir, pretrained=True, trainable_backbone_layers=0, pretrained_backbone=False):
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=pretrained,
-                                                   trainable_backbone_layers=trainable_backbone_layers,
+                                                                 trainable_backbone_layers=trainable_backbone_layers,
                                                                  pretrained_backbone=pretrained_backbone)
     # This model has no new weights
     model.new_weights = nn.ParameterList()
@@ -32,8 +30,6 @@ def make_vanilla_model(model_dir, pretrained=True, trainable_backbone_layers=0, 
     # Assign a new class prediction layer for two classes
     representation_size = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor.cls_score = nn.Linear(representation_size, NUM_CLASSES)
-    # TODO: Better this way because the bounding boxes are set for each class for some reason????
-    # box_predictor = FastRCNNPredictor(representation_size,num_classes)
     if pretrained:
         path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_pretrained.pt"
     elif pretrained_backbone:
@@ -41,6 +37,7 @@ def make_vanilla_model(model_dir, pretrained=True, trainable_backbone_layers=0, 
     else:
         path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_no_pretraining.pt"
     torch.save(model, path)
+
 
 def make_final_layer_model(model_dir, pretrained=True, trainable_backbone_layers=0, pretrained_backbone=False):
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=pretrained,
@@ -67,7 +64,6 @@ def make_final_layer_model(model_dir, pretrained=True, trainable_backbone_layers
 
     new_weights = torch.narrow(extended_weights, 1, 0, existing_weights.shape[1])
     # new_weights = torch.narrow(extended_weights, 1, existing_weights.shape[1], new_weights.shape[1])
-
 
     model.new_weights = nn.ParameterList([nn.Parameter(new_weights)])
     # Assign a new class prediction layer for two classes
@@ -112,6 +108,7 @@ def make_first_layer_model(model_dir, pretrained=True, trainable_backbone_layers
         path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_no_pretraining_first.pt"
     torch.save(model, path)
 
+
 def make_normal_backbone_model(model_dir, pretrained=True, trainable_backbone_layers=0):
     # Assign the new FPN that only takes the final feature map layer
     backbone = torchvision.models.resnet50(pretrained=True, norm_layer=misc_nn_ops.FrozenBatchNorm2d)
@@ -122,12 +119,13 @@ def make_normal_backbone_model(model_dir, pretrained=True, trainable_backbone_la
     out_channels = 256
     backbone_features = BackboneWithFPN(backbone, return_layers, in_channels_list, out_channels, extra_blocks=None)
     backbone_features.fpn = FeaturePyramidNetwork(in_channels_list=in_channels_list,
-                out_channels=out_channels,
-                extra_blocks=None)
+                                                  out_channels=out_channels,
+                                                  extra_blocks=None)
     # An anchor generator that is appropriate for a single feature map
     rpn_anchor_generator = AnchorGenerator()
     # This won't have pretrained weights in the RPN
-    model = torchvision.models.detection.FasterRCNN(backbone_features, NUM_CLASSES, rpn_anchor_generator=rpn_anchor_generator)
+    model = torchvision.models.detection.FasterRCNN(backbone_features, NUM_CLASSES,
+                                                    rpn_anchor_generator=rpn_anchor_generator)
     # Assign the trainable layers (this is usually done during initialisation)
     # This model has no new weights
     model.new_weights = nn.ParameterList()
@@ -141,10 +139,10 @@ def make_normal_backbone_model(model_dir, pretrained=True, trainable_backbone_la
         path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_no_pretraining_basic_backbone.pt"
     torch.save(model, path)
 
+
 def make_pre_roi_model(model_dir, returned_layers, pretrained=True, pooling_layer=False, out_channels=256):
     assert min(returned_layers) > 0 and max(
         returned_layers) < 5, "Returned layers must correspond to layers in the resnet"
-    # TODO: Add option to change this with checks for returned layers being correct
     trainable_backbone_layers = 5
     # Assign the new FPN that only takes the final feature map layer
     backbone = torchvision.models.resnet50(pretrained=pretrained, norm_layer=misc_nn_ops.FrozenBatchNorm2d)
@@ -163,7 +161,7 @@ def make_pre_roi_model(model_dir, returned_layers, pretrained=True, pooling_laye
     # An anchor generator that is appropriate for a single feature map
     # Only add the necessary layers to the anchor generation
     ANCHOR_SIZES = [(32,), (64,), (128,), (256,), (512,)]
-    our_anchor_sizes = [ANCHOR_SIZES[ind-1] for ind in returned_layers]
+    our_anchor_sizes = [ANCHOR_SIZES[ind - 1] for ind in returned_layers]
     aspect_ratios = ((0.5, 1.0, 2.0),) * len(our_anchor_sizes)
     rpn_anchor_generator = AnchorGenerator(
         our_anchor_sizes, aspect_ratios)
@@ -225,7 +223,7 @@ def make_pre_rpn_pretrained_model(model_dir, returned_layers, pooling_layer=Fals
     # We now need to alter the RPN to accomodate the new size
     #
     ANCHOR_SIZES = [(32,), (64,), (128,), (256,), (512,)]
-    our_anchor_sizes = [ANCHOR_SIZES[ind-1] for ind in rpn_returned]
+    our_anchor_sizes = [ANCHOR_SIZES[ind - 1] for ind in rpn_returned]
     aspect_ratios = ((0.5, 1.0, 2.0),) * len(our_anchor_sizes)
     model.rpn.anchor_generator = AnchorGenerator(
         our_anchor_sizes, aspect_ratios)
@@ -261,6 +259,3 @@ def make_pre_rpn_pretrained_model(model_dir, returned_layers, pooling_layer=Fals
     model.roi_heads.__class__ = RoIHeadsVanilla
     path = model_dir / f"RCNN-resnet-50_{trainable_backbone_layers}_layer_really_pretrained_pre_rpn_{rpn_returned}_out_channels_{out_channels}.pt"
     torch.save(model, path)
-
-
-
