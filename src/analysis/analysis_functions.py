@@ -5,9 +5,7 @@ from itertools import cycle
 
 import mlflow
 import pandas as pd
-import numpy as np
 import yaml
-import cv2
 import matplotlib.pyplot as plt
 
 module_path = pathlib.Path(__file__).parent
@@ -25,7 +23,6 @@ def get_dataframe(directory, taskname=None):
     :return:
     """
     # if the taskname is not a list then put it in a list
-    #TODO: proper duck typing would be better here
     if isinstance(taskname, str):
         taskname = [taskname]
     # Convert to pathlib path
@@ -50,7 +47,7 @@ def get_dataframe(directory, taskname=None):
 
 def get_runs_data(df, verbose=True):
     """
-    Take a dataframe of our run logs, access any mlflow data that was stored for these runs and return a dataframe
+    Take a dataframe of our run logs, access any mlflow data that was stored for these runs, and return a dataframe
     augmented with the metrics
     :param df:
     :return: df
@@ -58,11 +55,11 @@ def get_runs_data(df, verbose=True):
     run_ids = df["run_id"]
     rows = []
     if verbose:
-        #TODO: Using print statemetns here because logging doesn't work nicely with notebooks. This could be fixed
+        # Using print statements here because logging doesn't work nicely with notebooks
         print("Reading run info from server")
     for i, ind in enumerate(run_ids.index):
         if verbose and not i % 10:
-            print(f"Run {i} of {len(run_ids)} ({i/len(run_ids) * 100:.2f}%)")
+            print(f"Run {i} of {len(run_ids)} ({i / len(run_ids) * 100:.2f}%)")
         run_id = run_ids[ind]
         if type(run_id) is str:
             metric_data = get_run_metric_data(run_id)
@@ -108,6 +105,7 @@ def get_run_metric_data(run_id: str) -> pd.DataFrame:
     run_df = pd.DataFrame([values], columns=index)
     return run_df
 
+
 def repair_mixed_metrics(df):
     """Unify all metrics with dashes and underscores
 
@@ -117,13 +115,12 @@ def repair_mixed_metrics(df):
     existing_cols = df.columns.unique(level=1)
     existing_tops = df.columns.unique(level=0)
     cols = []
-    # TODO: Do the reassignment based on the top level index rather than the bottom level
+    # Note: Could do the reassignment based on the top level index rather than the bottom level
     for tup in df.columns:
         # Will have to do some stuff for the multiindex here
         top = tup[0]
         col = tup[1]
         if "-" in top:
-            # new_col = col.replace("-", "_")
             new_col = col
             new_top = top.replace("-", "_")
             # Check if there is a new top level term (sometimes it hasn't been replaced)
@@ -133,7 +130,7 @@ def repair_mixed_metrics(df):
                 new_df.rename({top: new_top}, inplace=True, axis=1)
                 continue
             # Check that there is only one existing value
-            inds = [i for i,e in enumerate(existing_cols) if e == new_col]
+            inds = [i for i, e in enumerate(existing_cols) if e == new_col]
             assert inds or len(inds) == 1, "There should be 0 or 1 match for every column with a -"
             # Now we transfer the existing data to the new column (while checking that the overlap doesn't overwrite anything)
             matches = df[(top, col)].isna()
@@ -145,14 +142,12 @@ def repair_mixed_metrics(df):
     new_df = new_df.drop(cols, axis=1)
     return new_df
 
+
 def multiindex_transpose(df):
     """
     Transpose the dataframe while keeping the same high level multiindex group
-
-    # TODO: Include example here
-    # TODO: This might be related to pivot function??
-    # https://stackoverflow.com/questions/35414625/pandas-how-to-run-a-pivot-with-a-multi-index
     """
+    # Note: This could probably be done with stack/unstack
     dfs = []
     cols = df.columns.unique(level=0)
     for col in cols:
@@ -164,6 +159,7 @@ def multiindex_transpose(df):
         dfs.append(trans)
     transposed = pd.concat(dfs, axis=1)
     return transposed
+
 
 def filter_df(df, param_cols, metric_cols):
     """Get the dataframe with only these parameters and metrics.
@@ -177,7 +173,6 @@ def filter_df(df, param_cols, metric_cols):
     cond_1 = lvl_1.isin(param_cols)
     new_df = df.loc[:, cond_0 | cond_1].copy()
     # Assumes that params come first in the ordering followed by metrics
-    # TODO: You could check this assumption by doing cond for matches again
     try:
         new_df.columns = param_cols + metric_cols
     except ValueError:
@@ -185,6 +180,7 @@ def filter_df(df, param_cols, metric_cols):
     # Make sure it is in dataframe format and not series format
     new_df = pd.DataFrame(new_df)
     return new_df
+
 
 def boxplot(df, all_params, params, metrics, col_names=None):
     red_df = filter_df(df, all_params, metrics)
@@ -199,6 +195,7 @@ def boxplot(df, all_params, params, metrics, col_names=None):
     ax.set_title("Results for different models runs")
     plt.show()
 
+
 def clean_names(df):
     # Make the df a little easier to read
     df[("params", "data_file")] = df[("params", "data_file")].map(str)
@@ -209,11 +206,3 @@ def clean_names(df):
     red_df[("params", "base_model_path")] = [names_list[1] for names_list in split_model_names]
     return red_df
 
-
-# def display_boxes(image_file, true_boxes, ann_boxes):
-#     image = cv2.imread(image_file)
-#     for true_box in true_boxes:
-#         x1, x2, y1, y2 = true_box
-#         cv2.rectangle(image, (int(x1), int(y1)), ((int(x2), int(y2)), (255, 0, 0), 1)
-#     cv2.imshow(' ', image)
-#     plt.show()
