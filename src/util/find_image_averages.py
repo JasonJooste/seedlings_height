@@ -1,8 +1,4 @@
-# This isn't in notebook form at the moment because my jupyter in pycharm is broken and this is really very short. I might
-# move it over later if I have the time
-
-# I need to get the averages and sd from each channel in the dataset. At the moment this is hard coded into the model image
-# transformer
+"""A quick script to get the means and standard deviations of each of the image channels in the data"""
 import torch
 
 from src.data.data_classes import SeedlingDataset
