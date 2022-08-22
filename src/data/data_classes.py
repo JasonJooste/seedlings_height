@@ -62,7 +62,6 @@ class SeedlingDataset(Dataset):
         # Now the labels
         labels = torch.ones((records.shape[0],), dtype=torch.int64)
         iscrowd = torch.zeros((records.shape[0],), dtype=torch.int64)
-        # TODO: Put this into coco format straight away? Might be some overhead with uploading unncessary stuff to the GPU...
         target = {}
         target["image_id"] = torch.tensor(index)
         target["boxes"] = torch.tensor(records[["xmin", "ymin", "xmax", "ymax"]].values, dtype=torch.float)

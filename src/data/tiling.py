@@ -53,11 +53,11 @@ def extract_matching_image(big_image_path, small_image_path):
     driver = gdal.GetDriverByName("GTiff")
     outdata = driver.Create(str(out_filepath), width, height, 1, gdal.GDT_Float32)
     outdata.SetGeoTransform(gt_new)
-    # TODO: Understand what the projection is
     outdata.SetProjection(big_data.GetProjection())  # sets same projection as input
     outdata.GetRasterBand(1).WriteArray(big_slice)
     outdata.FlushCache()
     return out_filepath
+
 
 def geo_to_pixel(gt, new_long, new_lat):
     # Read in the geological coordinates of the images
@@ -72,7 +72,7 @@ def geo_to_pixel(gt, new_long, new_lat):
     pixel_y = math.floor((new_lat - lat) / lat_spacing)
     return pixel_x, pixel_y
 
-#TODO: Make it clear that this is reversed (long, lat) to match pixel x,y values
+
 def pixel_to_geo(gt, x, y):
     # Read in the geological coordinates of the images
     long = gt[0]  # The latitude of the top left pixel
@@ -85,6 +85,7 @@ def pixel_to_geo(gt, x, y):
     new_lat = lat + y * lat_spacing
     new_long = long + x * long_spacing
     return new_long, new_lat
+
 
 def convert_to_3_layer(filename):
     # Generate a file with three layers instead of 4
@@ -127,7 +128,7 @@ def resize_files(fn1, fn2):
     data1 = gdal.Open(str(fn1))
     data2 = gdal.Open(str(fn2))
     if not data1 or not data2:
-        return # TODO: This could be better. Maybe an exception should be thrown
+        return  # Note: This could be better. Maybe an exception should be thrown
     gt1 = data1.GetGeoTransform()
     gt2 = data2.GetGeoTransform()
     # Entries 1 and 5 show the distance moved per pixel in x and y
@@ -156,13 +157,13 @@ def resize_files(fn1, fn2):
     driver = gdal.GetDriverByName("GTiff")
     outdata = driver.Create(str(new_file), new_x, new_y, 1, gdal.GDT_Float32)
     outdata.SetGeoTransform(gt)
-    # TODO: Understand what the projection is
     outdata.SetProjection(data2.GetProjection())  # sets same projection as input
     outdata.GetRasterBand(1).WriteArray(new_im_arr)
     outdata.FlushCache()
     return new_file
 
-def split_images(filename, new_path,  slice_w=256, slice_h=256):
+
+def split_images(filename, new_path, slice_w=256, slice_h=256):
     """
     Split a large image into a series of small tiles and save them
     :return:
@@ -174,8 +175,7 @@ def split_images(filename, new_path,  slice_w=256, slice_h=256):
     pos_y = 0
     while pos_y < im_h:
         while pos_x < im_w:
-            im_sec = image[pos_y:pos_y+slice_h, pos_x:pos_x+slice_w]
-            #TODO: This would be much prettier just in the loop
+            im_sec = image[pos_y:pos_y + slice_h, pos_x:pos_x + slice_w]
             if im_sec.shape[0] != slice_h or im_sec.shape[1] != slice_w:
                 pos_x += slice_w
                 continue
@@ -189,7 +189,7 @@ def split_images(filename, new_path,  slice_w=256, slice_h=256):
 
 def remove_pad_tl(image_path, shift):
     image = skim.io.imread(image_path)
-    im_new_filename = f"{image_path.stem}_buffer_removed"+image_path.suffix
+    im_new_filename = f"{image_path.stem}_buffer_removed" + image_path.suffix
     im_new_path = base_dir / "data" / "interim" / im_new_filename
     if image.ndim == 2:
         image = image[shift + 1:, shift + 1:]
@@ -230,71 +230,19 @@ def process_images(image_path, height_path, large_height, slice_h=256, slice_w=2
     split_images(new_height_path, h_final_path, slice_w, slice_h)
 
 
-#############################################################################################################
-# Run for our lanes
-gdal.UseExceptions()
-raw_dir = base_dir / "data" / "raw" / "images"
-# The high def data from 464
-im_full = raw_dir / "site_464_201710_030m_ortho_als11.tif"
-height_path = raw_dir / "old_height_464.tif"
-process_images(im_full, height_path, False, clear=True)
-# Now get the normal data for all lanes
-lane_files = {460: "site_460_201710_030m_ortho_als11.tif",
-              464: "site_464_201710_030m_ortho_als11.tif",
-              466: "site_466_201710_030m_ortho_als11.tif"}
+if __name__ == "__main__":
+    gdal.UseExceptions()
+    raw_dir = base_dir / "data" / "raw" / "images"
+    # The high def data from 464
+    im_full = raw_dir / "site_464_201710_030m_ortho_als11.tif"
+    height_path = raw_dir / "old_height_464.tif"
+    process_images(im_full, height_path, False, clear=True)
+    # Now get the normal data for all lanes
+    lane_files = {460: "site_460_201710_030m_ortho_als11.tif",
+                  464: "site_464_201710_030m_ortho_als11.tif",
+                  466: "site_466_201710_030m_ortho_als11.tif"}
 
-CHM_path = raw_dir / "KirbyLeafOff2017DSMEntireSite.tif"
-for im_path in lane_files.values():
-    im_full = raw_dir / im_path
-    process_images(im_full, CHM_path, True, clear=False)
-
-
-
-#### Assessing alignment
-
-
-# def get_num_channels(filename):
-#     src_ds = gdal.Open(str(filename))
-#     if src_ds is not None:
-#         return src_ds.RasterCount
-#
-# def plot_two_images(height_path, colour_path, ax, alpha=0.6, log=False, vmax=18):
-#     """Plot a number of layered slices to correct the image shift"""
-#     height_1 = gdal.Open(str(height_path))
-#     height_1 = height_1.ReadAsArray()
-#     # Histogram of heights
-#     fig2, ax2 = plt.subplots()
-#     ax2.hist(height_1.flatten())
-#     fig2.show()
-#     if log:
-#         height_1 = np.log(height_1)
-#     colour = gdal.Open(str(colour_path))
-#     colour = colour.ReadAsArray()
-#     # Add an alpha channel to the first plot
-#     colour = np.moveaxis(colour, 0, -1)
-#     # Because we're feeding in float alphas matplotlib needs the values in floats
-#     if type(colour[0,0,0]) is np.uint8:
-#         colour = colour / 256.0
-#     elif type(colour[0,0,0]) is np.uint16:
-#         colour = colour / 256.0 ** 2
-#     else:
-#         assert False, "We can't handle other data types"
-#     new_shape = list(colour.shape)
-#     new_shape[2] = 1
-#     alpha = np.full(new_shape, alpha)
-#     colour = np.concatenate((colour, alpha), axis=2)
-#     if log:
-#         vmax = np.log(vmax)
-#     ax.imshow(height_1, vmin=0, vmax=vmax)
-#     ax.imshow(colour)
-#     ax.get_xaxis().set_visible(False)
-#     ax.get_yaxis().set_visible(False)
-#
-# height_path = base_dir / "data" / "interim" / "site_460_GNDDIPC_3m_large_buffer_removed.tif"
-# colour_path = base_dir / "data" / "interim" / "site_460_201710_030m_ortho_als11_3channels.tif"
-#
-# fig, ax = plt.subplots()
-# plot_two_images(height_path, colour_path, ax)
-# plt.show()
-# height_path = base_dir / "data" / "interim" / "site_466_201710_CHM10cm_large_buffer_removed.tif"
-
+    CHM_path = raw_dir / "KirbyLeafOff2017DSMEntireSite.tif"
+    for im_path in lane_files.values():
+        im_full = raw_dir / im_path
+        process_images(im_full, CHM_path, True, clear=False)

@@ -46,7 +46,6 @@ for im_filename in colour_ids["im_filename"]:
 # Remove the rows with blank images
 colour_ids = colour_ids.loc[~colour_ids["blank"]]
 # Get the files that are shared across all
-#TODO: This is strange. Height and colour don't have the same number of images and the smaller one (height) isn't even a subset.
 union_ids = height_ids.merge(colour_ids, on="id", how="outer").merge(label_ids, on="id", how="outer")
 # Warn for ids that are not shared
 missing_labels = union_ids["label_filename"].isna().to_numpy().nonzero()[0]
