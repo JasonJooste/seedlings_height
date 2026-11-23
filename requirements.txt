@@ -1,0 +1,14 @@
+torch
+torchvision
+numpy
+pandas
+scikit-learn
+scikit-image
+opencv-python
+pycocotools
+matplotlib
+mlflow
+PyYAML
+click
+# GDAL needs the system GDAL libraries installed first, at a matching version
+GDAL
