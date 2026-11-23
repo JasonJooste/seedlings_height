@@ -1,14 +1,11 @@
 import math
 import pathlib
 import gdal
-import matplotlib
 import os
 import skimage as skim
 import skimage.transform
 import skimage.io
 import numpy as np
-import matplotlib.pyplot as plt
-import rasterio
 
 EPS = 1e-1
 

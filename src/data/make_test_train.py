@@ -1,15 +1,12 @@
-import math
 import pathlib
 
 import cv2
 
-from src.data.data_classes import SeedlingDataset
 import src.util.util as utils
 import logging
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import numpy as np
-import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 module_path = pathlib.Path(__file__).parent

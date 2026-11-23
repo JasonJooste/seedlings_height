@@ -1,4 +1,3 @@
-import copy
 from unittest import TestCase
 from src.models.train_model import *
 

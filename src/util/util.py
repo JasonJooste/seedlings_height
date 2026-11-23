@@ -2,15 +2,13 @@ import contextlib
 import os
 import random
 
-import sys
-import os
 import cv2
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
 import gc
-from types import ModuleType
+
+
 class Averager:
     def __init__(self):
         self.current_total = 0.0

@@ -7,10 +7,18 @@ from datetime import datetime
 from random import shuffle
 
 import mlflow
+import torch
 import yaml
 
 import src.util.util as utils
-from src.models.make_base_models import *
+from src.models.make_base_models import (
+    make_final_layer_model,
+    make_first_layer_model,
+    make_normal_backbone_model,
+    make_pre_roi_model,
+    make_pre_rpn_pretrained_model,
+    make_vanilla_model,
+)
 from src.models.train_model import fit_and_test
 
 module_path = pathlib.Path(__file__).parent
@@ -185,7 +193,7 @@ def build_models(template_dir):
 
 if __name__ == "__main__":
     config_filenames = sys.argv[1:]
-    for config_filname in config_filenames:
+    for config_filename in config_filenames:
         print("*" * 80)
-        print(f"Executing config file {config_filname}")
-        run(config_filname)
+        print(f"Executing config file {config_filename}")
+        run(config_filename)

@@ -1,5 +1,4 @@
 import logging
-import math
 import pathlib
 from xml.dom import minidom
 
